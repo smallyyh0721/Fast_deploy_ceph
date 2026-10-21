@@ -1,0 +1,23 @@
+node2 (10.250.0.12) ok
+podman (/usr/bin/podman) version 4.9.3 is present
+systemctl is present
+lvcreate is present
+Unit chrony.service is enabled and running
+Hostname "node2" matches what is expected.
+Host looks OK
+Added host 'node2' with addr '10.250.0.12'
+node3 (10.250.0.13) ok
+podman (/usr/bin/podman) version 4.9.3 is present
+systemctl is present
+lvcreate is present
+Unit chrony.service is enabled and running
+Hostname "node3" matches what is expected.
+Host looks OK
+Added host 'node3' with addr '10.250.0.13'
+Scheduled mon update...
+Scheduled mgr update...
+HOST   ADDR         LABELS          STATUS  
+node1  10.250.0.11  _admin,mon,mgr          
+node2  10.250.0.12  mon,mgr                 
+node3  10.250.0.13  mon,mgr                 
+3 hosts in cluster

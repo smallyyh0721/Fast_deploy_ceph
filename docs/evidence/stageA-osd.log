@@ -1,0 +1,46 @@
+[1;32m[05:10:35][0m orchestrator device inventory:
+HOST   PATH      TYPE  TRANSPORT  RPM  DEVICE ID   SIZE  HEALTH  IDENT  FAULT  AVAILABLE  REFRESHED  REJECT REASONS                                                         
+node1  /dev/fd0  hdd                              4096           N/A    N/A    No         2m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)  
+node1  /dev/vdb  hdd                   CEPHN1D1   12.0G          N/A    N/A    Yes        2m ago                                                                            
+node1  /dev/vdc  hdd                               368k          N/A    N/A    No         2m ago     Has a FileSystem, Insufficient space (<5GB)                            
+
+HOST       DEVICE                                                       ACTION
+node1      /dev/disk/by-id/virtio-CEPHN1D1                              CREATE OSD (wipes vdb)
+
+[1;32m[05:11:07][0m PREVIEW only. 1 OSD(s) would be created. Re-run with --yes-i-really-mean-it
+[1;32m[05:11:07][0m orchestrator device inventory:
+HOST   PATH      TYPE  TRANSPORT  RPM  DEVICE ID   SIZE  HEALTH  IDENT  FAULT  AVAILABLE  REFRESHED  REJECT REASONS                                                         
+node1  /dev/fd0  hdd                              4096           N/A    N/A    No         0s ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)  
+node1  /dev/vdb  hdd                   CEPHN1D1   12.0G          N/A    N/A    Yes        0s ago                                                                            
+node1  /dev/vdc  hdd                               368k          N/A    N/A    No         0s ago     Has a FileSystem, Insufficient space (<5GB)                            
+
+HOST       DEVICE                                                       ACTION
+node1      /dev/disk/by-id/virtio-CEPHN1D1                              CREATE OSD (wipes vdb)
+
+[1;32m[05:11:41][0m ceph orch daemon add osd node1:/dev/disk/by-id/virtio-CEPHN1D1
+Created osd(s) 0 on host 'node1'
+ID  CLASS  WEIGHT   TYPE NAME       STATUS  REWEIGHT  PRI-AFF
+-1         0.01169  root default                             
+-3         0.01169      host node1                           
+ 0    hdd  0.01169          osd.0       up   1.00000  1.00000
+1 osds: 1 up (since 39s), 1 in (since 2m); epoch: e14
+  cluster:
+    id:     b3fcc57b-cd0c-11f1-b843-525400000001
+    health: HEALTH_WARN
+            1 pool(s) have no replicas configured
+ 
+  services:
+    mon: 1 daemons, quorum node1 (age 12m) [leader: node1]
+    mgr: node1.fryujg(active, since 11m)
+    osd: 1 osds: 1 up (since 117s), 1 in (since 4m)
+ 
+  data:
+    pools:   1 pools, 1 pgs
+    objects: 2 objects, 577 KiB
+    usage:   28 MiB used, 12 GiB / 12 GiB avail
+    pgs:     1 active+clean
+ 
+ID  CLASS  WEIGHT   TYPE NAME       STATUS  REWEIGHT  PRI-AFF
+-1         0.01169  root default                             
+-3         0.01169      host node1                           
+ 0    hdd  0.01169          osd.0       up   1.00000  1.00000

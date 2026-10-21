@@ -1,0 +1,10 @@
+13:23:49 vms 2,3 up
+13:26:11 bundle copied to node2/3
+13:27:24 node1 reinstall ok
+13:36:12 node2 install ok
+13:36:14 node3 install ok
+13:39:24 bootstrap (idempotent rerun) ok
+13:39:46 add hosts FAIL
+13:47:51 hosts added
+13:59:32 osds created
+14:22:48 cephfs ok

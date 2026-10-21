@@ -1,0 +1,48 @@
+[1;32m[05:51:55][0m orchestrator device inventory:
+HOST   PATH      TYPE  TRANSPORT  RPM  DEVICE ID   SIZE  HEALTH  IDENT  FAULT  AVAILABLE  REFRESHED  REJECT REASONS                                                           
+node1  /dev/fd0  hdd                              4096           N/A    N/A    No         2m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)    
+node1  /dev/vdb  hdd                   CEPHN1D1   12.0G          N/A    N/A    No         2m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected  
+node1  /dev/vdc  hdd                               368k          N/A    N/A    No         2m ago     Has a FileSystem, Insufficient space (<5GB)                              
+node2  /dev/fd0  hdd                              4096           N/A    N/A    No         6m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)    
+node2  /dev/vdb  hdd                   CEPHN2D1   12.0G          N/A    N/A    Yes        6m ago                                                                              
+node2  /dev/vdc  hdd                               368k          N/A    N/A    No         6m ago     Has a FileSystem, Insufficient space (<5GB)                              
+node3  /dev/fd0  hdd                              4096           N/A    N/A    No         3m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)    
+node3  /dev/vdb  hdd                   CEPHN3D1   12.0G          N/A    N/A    Yes        3m ago                                                                              
+node3  /dev/vdc  hdd                               368k          N/A    N/A    No         3m ago     Has a FileSystem, Insufficient space (<5GB)                              
+
+HOST       DEVICE                                                       ACTION
+node1      /dev/disk/by-id/virtio-CEPHN1D1                              skip (already OSD on vdb)
+node2      /dev/disk/by-id/virtio-CEPHN2D1                              CREATE OSD (not resolvable from here; ceph-volume refuses in-use disks)
+node3      /dev/disk/by-id/virtio-CEPHN3D1                              CREATE OSD (not resolvable from here; ceph-volume refuses in-use disks)
+
+[1;32m[05:52:34][0m PREVIEW only. 2 OSD(s) would be created. Re-run with --yes-i-really-mean-it
+[1;32m[05:52:34][0m orchestrator device inventory:
+HOST   PATH      TYPE  TRANSPORT  RPM  DEVICE ID   SIZE  HEALTH  IDENT  FAULT  AVAILABLE  REFRESHED  REJECT REASONS                                                           
+node1  /dev/fd0  hdd                              4096           N/A    N/A    No         2m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)    
+node1  /dev/vdb  hdd                   CEPHN1D1   12.0G          N/A    N/A    No         2m ago     Has a FileSystem, Insufficient space (<10 extents) on vgs, LVM detected  
+node1  /dev/vdc  hdd                               368k          N/A    N/A    No         2m ago     Has a FileSystem, Insufficient space (<5GB)                              
+node2  /dev/fd0  hdd                              4096           N/A    N/A    No         6m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)    
+node2  /dev/vdb  hdd                   CEPHN2D1   12.0G          N/A    N/A    Yes        6m ago                                                                              
+node2  /dev/vdc  hdd                               368k          N/A    N/A    No         6m ago     Has a FileSystem, Insufficient space (<5GB)                              
+node3  /dev/fd0  hdd                              4096           N/A    N/A    No         4m ago     Failed to determine if device is BlueStore, Insufficient space (<5GB)    
+node3  /dev/vdb  hdd                   CEPHN3D1   12.0G          N/A    N/A    Yes        4m ago                                                                              
+node3  /dev/vdc  hdd                               368k          N/A    N/A    No         4m ago     Has a FileSystem, Insufficient space (<5GB)                              
+
+HOST       DEVICE                                                       ACTION
+node1      /dev/disk/by-id/virtio-CEPHN1D1                              skip (already OSD on vdb)
+node2      /dev/disk/by-id/virtio-CEPHN2D1                              CREATE OSD (not resolvable from here; ceph-volume refuses in-use disks)
+node3      /dev/disk/by-id/virtio-CEPHN3D1                              CREATE OSD (not resolvable from here; ceph-volume refuses in-use disks)
+
+[1;32m[05:53:12][0m ceph orch daemon add osd node2:/dev/disk/by-id/virtio-CEPHN2D1
+Created osd(s) 1 on host 'node2'
+[1;32m[05:55:29][0m ceph orch daemon add osd node3:/dev/disk/by-id/virtio-CEPHN3D1
+Created osd(s) 2 on host 'node3'
+ID  CLASS  WEIGHT   TYPE NAME       STATUS  REWEIGHT  PRI-AFF
+-1         0.03506  root default                             
+-3         0.01169      host node1                           
+ 0    hdd  0.01169          osd.0       up   1.00000  1.00000
+-5         0.01169      host node2                           
+ 1    hdd  0.01169          osd.1       up   1.00000  1.00000
+-7         0.01169      host node3                           
+ 2    hdd  0.01169          osd.2       up   1.00000  1.00000
+3 osds: 3 up (since 106s), 3 in (since 3m); epoch: e44

@@ -1,0 +1,14 @@
+Non-zero exit code 125 from /usr/bin/podman run --rm --ipc=host --stop-signal=SIGTERM --net=host --entrypoint ceph --init -e CONTAINER_IMAGE=10.250.0.11:5000/ceph/ceph:v20.2.4 -e NODE_NAME=node1 10.250.0.11:5000/ceph/ceph:v20.2.4 --version
+ceph: stderr Error: lookup init binary: exec: "catatonit": executable file not found in $PATH
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/local/sbin/cephadm/__main__.py", line 5322, in <module>
+  File "/usr/local/sbin/cephadm/__main__.py", line 5310, in main
+  File "/usr/local/sbin/cephadm/cephadmlib/decorators.py", line 27, in _require_image
+  File "/usr/local/sbin/cephadm/__main__.py", line 426, in _infer_image
+  File "/usr/local/sbin/cephadm/__main__.py", line 1846, in command_inspect_image
+  File "/usr/local/sbin/cephadm/cephadmlib/container_types.py", line 435, in run
+  File "/usr/local/sbin/cephadm/cephadmlib/call_wrappers.py", line 307, in call_throws
+RuntimeError: Failed command: /usr/bin/podman run --rm --ipc=host --stop-signal=SIGTERM --net=host --entrypoint ceph --init -e CONTAINER_IMAGE=10.250.0.11:5000/ceph/ceph:v20.2.4 -e NODE_NAME=node1 10.250.0.11:5000/ceph/ceph:v20.2.4 --version: Error: lookup init binary: exec: "catatonit": executable file not found in $PATH
+

@@ -1,0 +1,22 @@
+[1;32m[06:04:11][0m up OSDs: 3, OSD hosts: 3, requested size=3 min_size=2
+set pool 2 size to 3
+set pool 2 min_size to 2
+set pool 3 size to 3
+set pool 3 min_size to 2
+Scheduled mds.models update...
+pool 1 '.mgr' replicated size 1 min_size 1 crush_rule 0 object_hash rjenkins pg_num 1 pgp_num 1 autoscale_mode on last_change 14 flags hashpspool stripe_width 0 pg_num_max 32 pg_num_min 1 application mgr read_balance_score 3.03
+pool 2 'models_meta' replicated size 3 min_size 2 crush_rule 0 object_hash rjenkins pg_num 32 pgp_num 32 autoscale_mode on last_change 47 lfor 0/0/19 flags hashpspool stripe_width 0 pg_autoscale_bias 4 pg_num_min 16 recovery_priority 5 application cephfs read_balance_score 1.31
+pool 3 'models_data' replicated size 3 min_size 2 crush_rule 0 object_hash rjenkins pg_num 16 pgp_num 16 autoscale_mode on last_change 50 flags hashpspool stripe_width 0 application cephfs read_balance_score 1.13
+
+models - 0 clients
+======
+RANK  STATE           MDS             ACTIVITY     DNS    INOS   DIRS   CAPS  
+ [1m0[0m    [1;32mactive[0m  models.node1.evgetf  Reqs:    0 /s    10     13     12      0   
+    POOL       TYPE     USED  AVAIL  
+models_meta  metadata   133k  11.3G  
+models_data    data       0   11.3G  
+    STANDBY MDS      
+models.node2.qvbywb  
+MDS version: ceph version 20.2.4 (7f793731f1b39eb4f465e960113d2363c311b964) tentacle (stable - RelWithDebInfo)
+[1;32m[06:21:46][0m client mount example (secret in /root/ceph-client-secrets/):
+mount -t ceph modelreader@.models=/ /mnt/models -o mon_addr=10.250.0.11/10.250.0.12/10.250.0.13,secretfile=/etc/ceph/modelreader.secret,_netdev

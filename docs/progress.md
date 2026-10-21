@@ -15,3 +15,5 @@
 - stage b: bootstrap (idempotent rerun) ok
 - stage b: add hosts FAIL
 - stage b: hosts added
+- stage b: osds created
+- stage b: cephfs ok
