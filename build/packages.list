@@ -1,5 +1,6 @@
 # Host packages installed on every Ceph node (one per line)
 podman
+catatonit
 lvm2
 chrony
 openssh-server
