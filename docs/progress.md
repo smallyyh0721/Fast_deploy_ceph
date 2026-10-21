@@ -17,3 +17,6 @@
 - stage b: hosts added
 - stage b: osds created
 - stage b: cephfs ok
+- stage b: DONE
+- [x] stage a PASSED; stage b PASSED through 3 MON / 2 MGR / 3 OSD; CephFS intentionally not validated (Alex)
+- [x] VMs shut down (disk images kept in /workspace/vm); bundle rebuilt 2026-10-21 15:01 UTC+8, SHA256SUMS verified, scripts match HEAD
