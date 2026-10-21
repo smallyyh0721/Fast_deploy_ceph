@@ -1,0 +1,56 @@
+# Fast_deploy_ceph cluster config. Copy to cluster.conf and edit EVERY value.
+# Sourced by bash; keep the array syntax.
+
+CEPH_VERSION="20.2.4"
+BUNDLE_DIR="/opt/ceph-offline"          # where the bundle is extracted on every node
+
+# Nodes: index 0 is the admin/bootstrap node (runs registry, chrony server, bootstrap).
+# Names MUST equal `hostname -s` on each node.
+NODE_NAMES=(node1 node2 node3)
+NODE_IPS=(10.250.0.11 10.250.0.12 10.250.0.13)   # storage/public IP (e.g. on bond0)
+PUBLIC_NETWORK="10.250.0.0/24"
+CLUSTER_NETWORK=""                       # optional separate replication network, "" = same
+
+# Local registry on node1, bound to NODE_IPS[0] only, plain HTTP (trusted as insecure).
+REGISTRY_PORT=5000
+# 1 = also `podman load` the ceph image on every node and tag it with the registry
+#     name, so daemons can start even if the registry is down (fallback).
+LOAD_IMAGE_ON_ALL_NODES=1
+
+# Time: node1 serves time to the cluster (stratum 10 local clock unless UPSTREAM_NTP set).
+UPSTREAM_NTP=""                          # e.g. "10.250.0.1" internal NTP; "" = node1 local clock
+NTP_ALLOW="10.250.0.0/24"
+
+# OSD devices, one entry per disk: "<host>:<stable path>". Use /dev/disk/by-id/...!
+# These disks will be WIPED by add-osds.sh. Never use --all-available-devices.
+OSD_DEVICES=(
+  "node1:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N1D1"
+  "node1:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N1D2"
+  "node1:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N1D3"
+  "node1:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N1D4"
+  "node2:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N2D1"
+  "node2:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N2D2"
+  "node2:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N2D3"
+  "node2:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N2D4"
+  "node3:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N3D1"
+  "node3:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N3D2"
+  "node3:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N3D3"
+  "node3:/dev/disk/by-id/nvme-EXAMPLE_SERIAL_N3D4"
+)
+
+# Replication (default 3/2: survives loss of one host). 2/1 possible but risky.
+POOL_SIZE=3
+POOL_MIN_SIZE=2
+
+# CephFS
+FS_NAME="models"
+META_POOL="models_meta"
+DATA_POOL="models_data"
+META_PG=32
+DATA_PG=128
+MDS_COUNT=2                               # 1 active + 1 standby
+CLIENT_RO="modelreader"
+CLIENT_RW="modelwriter"
+
+# Extra (testing only): osd_memory_target in bytes, "" = Ceph default (4 GiB)
+OSD_MEMORY_TARGET=""

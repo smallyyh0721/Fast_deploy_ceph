@@ -1,0 +1,15 @@
+# Host packages installed on every Ceph node (one per line)
+podman
+lvm2
+chrony
+openssh-server
+python3
+iproute2
+netplan.io
+ethtool
+jq
+curl
+nvme-cli
+smartmontools
+ca-certificates
+ceph-common

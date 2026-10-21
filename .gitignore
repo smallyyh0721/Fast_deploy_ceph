@@ -1,0 +1,9 @@
+# bundle artefacts are large: never commit
+*.tar
+*.tar.gz
+*.deb
+debs/
+images/
+bin/cephadm
+offline/cluster.conf
+*.secret
