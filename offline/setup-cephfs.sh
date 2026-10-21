@@ -10,6 +10,8 @@ HOSTS=$(ceph_ osd tree --format json | jq '[.nodes[] | select(.type=="host")] | 
 log "up OSDs: $UP, OSD hosts: $HOSTS, requested size=$POOL_SIZE min_size=$POOL_MIN_SIZE"
 [ "$HOSTS" -ge "$POOL_SIZE" ] || warn "fewer OSD hosts ($HOSTS) than POOL_SIZE ($POOL_SIZE): PGs will stay undersized (crush failure domain = host)"
 
+# bootstrap creates .mgr before osd_pool_default_size is set: align it
+if [ "$POOL_SIZE" -gt 1 ]; then ceph_ osd pool set .mgr size "$POOL_SIZE"; ceph_ osd pool set .mgr min_size "$POOL_MIN_SIZE"; fi
 for p in "$META_POOL:$META_PG" "$DATA_POOL:$DATA_PG"; do
   n=${p%%:*}; pg=${p#*:}
   ceph_ osd pool ls | grep -qx "$n" || ceph_ osd pool create "$n" "$pg"

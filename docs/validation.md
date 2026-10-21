@@ -25,5 +25,5 @@ Stage b extended the stage-a cluster (node1 re-ran install/bootstrap idempotentl
 ## Stage c – 3 × 4 disks: NOT RUN (by instruction; also not feasible on box RAM under TCG).
 
 ## Known gaps
-- `.mgr` pool keeps the size it was created with (stage a created it with size 1); on a real fresh 3-node deploy it is created after `osd_pool_default_size=3`? No – bootstrap creates `.mgr` before the default is set → run `ceph osd pool set .mgr size 3` after OSDs (TODO in setup-cephfs.sh).
+- `.mgr` pool is created by bootstrap before `osd_pool_default_size` is set; `setup-cephfs.sh` now sets `.mgr` to POOL_SIZE/POOL_MIN_SIZE (added after the run, not yet re-tested).
 - `ceph-common` deb is Ubuntu's 19.2.x (client tools only); daemons are 20.2.4 containers.
