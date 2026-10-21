@@ -30,10 +30,9 @@ need_root
 for i in "${!NODE_NAMES[@]}"; do
   [ "$i" -eq 0 ] && continue
   n=${NODE_NAMES[$i]}; ip=${NODE_IPS[$i]}
-  ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new "root@$ip" true \
-    || die "root ssh to $ip fails; distribute a key first (see printed commands)"
-  # shellcheck disable=SC2029  # pubkey intentionally expanded locally
-  ssh "root@$ip" "mkdir -p /root/.ssh && grep -qxF '$(cat /etc/ceph/ceph.pub)' /root/.ssh/authorized_keys 2>/dev/null || echo '$(cat /etc/ceph/ceph.pub)' >> /root/.ssh/authorized_keys"
+  # pubkey must already be in $n:/root/.ssh/authorized_keys (see printed commands)
+  ceph_ cephadm check-host "$n" "$ip" \
+    || die "cephadm cannot reach $n ($ip) as root with /etc/ceph/ceph.pub; distribute the key first"
   if ceph_ orch host ls --format json | grep -q "\"hostname\": \"$n\""; then
     log "$n already in cluster"
   else

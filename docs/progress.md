@@ -7,3 +7,11 @@
 - [!] bootstrap failed: catatonit missing (podman Recommends). Added to packages.list, rebuilding bundle
 - [x] stage a bootstrap OK (fsid b3fcc57b..., container_image=10.250.0.11:5000 digest) vm/stageA-bootstrap2.log
 - [x] stage a: 1 OSD up, HEALTH active+clean, vm/stageA-osd.log
+- stage b: vms 2,3 up
+- stage b: bundle copied to node2/3
+- stage b: node1 reinstall ok
+- stage b: node2 install ok
+- stage b: node3 install ok
+- stage b: bootstrap (idempotent rerun) ok
+- stage b: add hosts FAIL
+- stage b: hosts added
