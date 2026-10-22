@@ -7,7 +7,7 @@
 - [x] bootstrap.sh pins mgr/cephadm/container_image_{haproxy,keepalived}
 - [x] offline/setup-ingress-vip.sh (preview default, --apply)
 - [x] cluster.conf.example VIP placeholders; runbook §9 VIP; README
-- [x] Tar + SHA256SUMS rebuilt; Release tag bundle-20.2.4-vip
+- [x] Tar + SHA256SUMS rebuilt; Release https://github.com/smallyyh0721/Fast_deploy_ceph/releases/tag/bundle-20.2.4-vip
 - [x] Box validation: image load/tag + script syntax + conf dry parse
 - [!] Live orch apply ingress / VIP failover NOT run on this box (no cluster)
 
