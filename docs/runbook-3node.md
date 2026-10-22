@@ -244,14 +244,58 @@ sudo ./add-osds.sh --yes-i-really-mean-it       # 擦盘并创建
 
 ## 9. 验收清单
 
+以下命令均在 **node1** 执行。统一用 `cephadm shell`（宿主机直接 `ceph -s` 可能因旧版 `ceph-common` / keyring 报错，不代表集群异常）。
+
+### 9.1 集群监控（健康 / MON / MGR）
+
+```bash
+sudo cephadm shell -- ceph -s
+sudo cephadm shell -- ceph health detail
+sudo cephadm shell -- ceph orch host ls
+sudo cephadm shell -- ceph orch ps
+sudo cephadm shell -- ceph quorum_status -f json-pretty | grep -A6 quorum_names
+sudo cephadm shell -- ceph mgr stat
+```
+
+| 看什么 | 合格 |
+|---|---|
+| `ceph -s` | `health: HEALTH_OK`（无 OSD/无 pool 时可为 `HEALTH_WARN`，属中间态） |
+| `health detail` | 无 `MON_CLOCK_SKEW`；无持续 `OSD_DOWN` / `PG_DEGRADED`（上线后） |
+| `orch host ls` | 3 主机，无 Offline |
+| `quorum_names` | 3 个 MON 均在 quorum |
+| `mgr stat` | 1 active + ≥1 standby |
+
+### 9.2 OSD 状态
+
+```bash
+sudo cephadm shell -- ceph osd stat
+sudo cephadm shell -- ceph osd tree
+sudo cephadm shell -- ceph osd df tree
+sudo cephadm shell -- ceph orch device ls --wide
+sudo cephadm shell -- ceph pg stat
+# 有 pool 之后再看：
+sudo cephadm shell -- ceph osd pool ls detail
+```
+
+| 看什么 | 合格（本手册默认 3×4 盘） |
+|---|---|
+| `osd stat` | `12 osds: 12 up, 12 in` |
+| `osd tree` | 每个 host 下 4 个 OSD，`up` / `in`（weight > 0） |
+| `osd df tree` | 无异常近满盘；三台用量大致均衡 |
+| `device ls` | 数据盘已用或 Available 与规划一致；系统盘未进 OSD |
+| `pg stat` | 有 pool 后 PG 均为 `active+clean`（或短暂 `peering` 后收敛） |
+| `pool ls detail` | `size 3` `min_size 2`（或与 `cluster.conf` 一致） |
+
+### 9.3 总表
+
 | 项 | 合格 |
 |---|---|
 | hosts / 主机名 | 三台 `getent hosts` 与 `hostname -s` 一致 |
 | SSH | node1 `BatchMode` root → node2/node3；`ceph.pub` 同样可登录 |
 | 时间 | 无 `MON_CLOCK_SKEW`（node1 为 NTP） |
 | Registry | node2/3 能 pull `10.250.0.11:5000/ceph/ceph:v20.2.4` |
-| MON / MGR | 3 MON quorum；1 active + 1 standby MGR |
-| OSD | 3×4 up/in；PG `active+clean`（有 pool 后） |
+| MON / MGR | 见 §9.1 |
+| OSD | 见 §9.2 |
 | 副本 | 默认 size 3 / min_size 2 |
 | 故障 | 关一台非全部中断；恢复后回到 clean |
 
