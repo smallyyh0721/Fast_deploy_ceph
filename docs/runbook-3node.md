@@ -2,7 +2,7 @@
 
 > **适用**：3 × Ubuntu Server 24.04 LTS（x86_64），每台 1 块系统盘 + **4 块数据盘**，网络已配好；无外网、无 DNS。  
 > **版本**：Ceph Tentacle **20.2.4**，cephadm + podman，离线包。  
-> **目标**：3 MON + 2 MGR + 12 OSD；默认副本 **size=3 / min_size=2**。首选 **RBD**；CephFS 见 [cephfs-client.md](cephfs-client.md)。  
+> **目标**：3 MON + 2 MGR + 12 OSD；生产 **VIP**（cephadm ingress：haproxy + keepalived 容器）；默认副本 **size=3 / min_size=2**。首选 **RBD**；CephFS 见 [cephfs-client.md](cephfs-client.md)。CSI 离线包另仓，不在本仓库。  
 > **工具**：`build/`（联网机打包）+ `offline/`（现场执行）。示例 IP/主机名以下表为准，按现场改 `cluster.conf`。
 
 ## 0. 参数与步骤
@@ -15,6 +15,7 @@
 | 时间 | **node1 为集群 NTP**（`install-node.sh` 自动配置） |
 | OSD | 每台 4 条 `nodeX:/dev/disk/by-id/...`（严禁系统盘） |
 | 副本 | `POOL_SIZE=3` `POOL_MIN_SIZE=2` |
+| VIP（占位） | `VIP_ADDR=10.250.0.10`，`VIP_INTERFACE_NETWORK=10.250.0.0/24`（cephadm ingress） |
 
 ```text
 存储网 10.250.0.0/24
@@ -33,6 +34,7 @@
 | ⑥ Bootstrap | node1 | `./bootstrap.sh` | 1 MON + 1 MGR |
 | ⑦ 加主机 | node1 | 分发 `ceph.pub` + `./add-hosts.sh` | 3 主机、3 MON、2 MGR |
 | ⑧ OSD | node1 | `./add-osds.sh` 预览 → 确认执行 | `12 osds: 12 up, 12 in` |
+| ⑨ VIP | node1 | 填 `VIP_*` → `./setup-ingress-vip.sh` → `--apply` | VIP 漂移；ingress daemon 在跑 |
 
 ---
 
@@ -172,7 +174,7 @@ sudo cp cluster.conf.example cluster.conf && sudo vi cluster.conf
 cd /opt/ceph-offline/offline && sudo ./install-node.sh
 ```
 
-脚本会：离线 apt、启用 ssh、**以 node1 为 NTP**、装 cephadm、配置 registry 信任；node1 启动 `10.250.0.11:5000` 并推送镜像；各节点 `podman load` 兜底。可重复执行。
+脚本会：离线 apt、启用 ssh、**以 node1 为 NTP**、装 cephadm、配置 registry 信任；node1 启动 `10.250.0.11:5000` 并推送 **ceph / haproxy / keepalived** 镜像；各节点 `podman load` 兜底。可重复执行。
 
 验收要点：
 
@@ -238,15 +240,58 @@ sudo ./add-osds.sh --yes-i-really-mean-it       # 擦盘并创建
 
 验收：`ceph osd tree` 每 host 4 个 OSD；`ceph osd stat` → `12 osds: 12 up, 12 in`。
 
-集群至此可用于 **RBD**（创建 pool / `rbd` 镜像按业务需要另行配置）。CephFS 与客户端挂载见 [cephfs-client.md](cephfs-client.md)。
 
 ---
 
-## 9. 验收清单
+## 9. 生产 VIP（cephadm ingress）
+
+离线包含 Tentacle 默认镜像：`quay.io/ceph/haproxy:2.3`、`quay.io/ceph/keepalived:2.2.4`（`install-node.sh` 已推到 node1 registry，并在 bootstrap 时写入 `mgr/cephadm/container_image_*`）。
+
+### 9.1 填占位
+
+编辑三台同一份 `cluster.conf`：
+
+```bash
+VIP_ADDR="10.250.0.10"                 # 现场实 IP
+VIP_CIDR="24"
+VIP_INTERFACE_NETWORK="10.250.0.0/24"   # 用于选网卡，通常 = PUBLIC_NETWORK
+INGRESS_BACKEND_SERVICE="mon"
+INGRESS_SERVICE_ID="mon"
+INGRESS_KEEPALIVE_ONLY=1               # mon/CSI 推荐 1；RGW/NFS 全量 haproxy 时改 0
+```
+
+### 9.2 预览 → 应用（仅 node1）
+
+```bash
+cd /opt/ceph-offline/offline
+sudo ./setup-ingress-vip.sh                 # 只打印 YAML 与将执行的命令
+sudo ./setup-ingress-vip.sh --apply         # 钉镜像 + ceph orch apply ingress
+```
+
+验收：
+
+```bash
+sudo cephadm shell -- ceph orch ls ingress
+sudo cephadm shell -- ceph orch ps --service-name ingress.mon
+# 各节点看 VIP 落在哪台：
+ip -br addr | grep 10.250.0.10 || true
+```
+
+### 9.3 与后续 CSI / CephX
+
+- **CSI monitors（另仓离线包）**：优先写 **全部 MON IP:3300**；VIP 仅在确认可达后再加为额外入口。`INGRESS_KEEPALIVE_ONLY=1` 时 VIP 随 keepalived 漂移，**不会**自动让 mon 监听在 VIP 上。
+- Tentacle 对非 NFS 的 ingress 默认 **haproxy HTTP 模式**，不适合直接扛 MON msgr2；故本手册 mon VIP 默认 `keepalive_only`。全量 haproxy+keepalived 留给 RGW/NFS（`INGRESS_KEEPALIVE_ONLY=0` + 改 `INGRESS_BACKEND_SERVICE`）。
+- **CephX**：只需 keyring / K8s Secret，**无镜像**。
+
+集群至此可用于 **RBD**。CephFS 见 [cephfs-client.md](cephfs-client.md)。
+
+---
+
+## 10. 验收清单
 
 以下命令均在 **node1** 执行。统一用 `cephadm shell`（宿主机直接 `ceph -s` 可能因旧版 `ceph-common` / keyring 报错，不代表集群异常）。
 
-### 9.1 集群监控（健康 / MON / MGR）
+### 10.1 集群监控（健康 / MON / MGR）
 
 ```bash
 sudo cephadm shell -- ceph -s
@@ -265,7 +310,7 @@ sudo cephadm shell -- ceph mgr stat
 | `quorum_names` | 3 个 MON 均在 quorum |
 | `mgr stat` | 1 active + ≥1 standby |
 
-### 9.2 OSD 状态
+### 10.2 OSD 状态
 
 ```bash
 sudo cephadm shell -- ceph osd stat
@@ -286,7 +331,7 @@ sudo cephadm shell -- ceph osd pool ls detail
 | `pg stat` | 有 pool 后 PG 均为 `active+clean`（或短暂 `peering` 后收敛） |
 | `pool ls detail` | `size 3` `min_size 2`（或与 `cluster.conf` 一致） |
 
-### 9.3 总表
+### 10.3 总表
 
 | 项 | 合格 |
 |---|---|
@@ -294,16 +339,18 @@ sudo cephadm shell -- ceph osd pool ls detail
 | SSH | node1 `BatchMode` root → node2/node3；`ceph.pub` 同样可登录 |
 | 时间 | 无 `MON_CLOCK_SKEW`（node1 为 NTP） |
 | Registry | node2/3 能 pull `10.250.0.11:5000/ceph/ceph:v20.2.4` |
-| MON / MGR | 见 §9.1 |
-| OSD | 见 §9.2 |
+| MON / MGR | 见 §10.1 |
+| OSD | 见 §10.2 |
 | 副本 | 默认 size 3 / min_size 2 |
+| VIP / ingress | `orch ls ingress` 有服务；`keepalive`/`haproxy` 按配置在跑；VIP 在某一节点 |
 | 故障 | 关一台非全部中断；恢复后回到 clean |
 
-## 10. 上线前确认
+## 11. 上线前确认
 
 - [ ] `/etc/hosts` 三台一致；无 DNS 依赖
 - [ ] node1→node2/3 root 免密；`/etc/ceph/ceph.pub` 已装到 node2/3
 - [ ] 12 块数据盘 by-id 已核对；系统盘不在 `OSD_DEVICES`
 - [ ] 三台 `install-node.sh` 成功；registry 开机自启
 - [ ] 3 MON / 2 MGR / 12 OSD 正常
+- [ ] VIP 已填实地址并 `setup-ingress-vip.sh --apply`（或明确暂缓）
 - [ ] 备份：`/etc/ceph/*`、`cluster.conf`、registry 数据、离线包

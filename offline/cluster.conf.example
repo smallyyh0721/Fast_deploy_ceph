@@ -42,7 +42,27 @@ OSD_DEVICES=(
 POOL_SIZE=3
 POOL_MIN_SIZE=2
 
-# CephFS
+# --- Production VIP (cephadm ingress: haproxy + keepalived containers) ----------
+# Placeholders — fill before ./setup-ingress-vip.sh --apply
+VIP_ADDR="10.250.0.10"                   # floating VIP (no CIDR here)
+VIP_CIDR="24"                            # combined as VIP_ADDR/VIP_CIDR in the spec
+# Network used to pick the NIC for the VIP (usually same as PUBLIC_NETWORK)
+VIP_INTERFACE_NETWORK="10.250.0.0/24"
+VRRP_INTERFACE_NETWORK=""                # optional; "" = same NIC as VIP
+# Ingress images tags (must match offline bundle / Tentacle 20.2.4 defaults)
+HAPROXY_TAG="2.3"
+KEEPALIVED_TAG="2.2.4"
+# backend_service: "mon" for client/CSI-oriented VIP; "rgw.*" / "nfs.*" for those stacks
+INGRESS_BACKEND_SERVICE="mon"
+INGRESS_SERVICE_ID="mon"
+INGRESS_FRONTEND_PORT=3300               # msgr2 when fronting mon; ignored if keepalive_only
+INGRESS_MONITOR_PORT=1967                # haproxy stats; ignored if keepalive_only
+# 1 = keepalived only (recommended for mon/CSI VIP on Tentacle: stock haproxy mode is HTTP
+#     for non-nfs backends and is unsuitable for MON msgr2). 0 = full haproxy+keepalived
+#     (use for RGW/NFS backends).
+INGRESS_KEEPALIVE_ONLY=1
+
+# CephFS (optional; primary path is RBD — see docs/cephfs-client.md)
 FS_NAME="models"
 META_POOL="models_meta"
 DATA_POOL="models_data"

@@ -1,29 +1,22 @@
-# Validation (box, 2026-10-21, times UTC+8)
+# Validation notes
 
-## Environment
-- Box: Debian 13, 8 vCPU, 16 GB RAM. `/dev/kvm` present but **broken** (nested `kvm_spurious_fault` in `kvm_vm_ioctl_create_vcpu`), so VMs run under **QEMU TCG** (software emulation, slow).
-- VMs: official `noble-server-cloudimg-amd64` (clean Ubuntu 24.04), node1 4 GB / node2,3 3 GB, 4 vCPU, 12 GB virtio data disks with serials → `/dev/disk/by-id/virtio-CEPHN<n>D<d>`.
-- Network: mgmt NIC = QEMU user-net with `restrict=on` (SSH port-forward only, **no internet / no DNS**, see `evidence/stageB-net.log`: `NO_INTERNET` on all 3); storage NIC `stor0` 10.250.0.1x/24 over a QEMU multicast L2 segment.
-- Bundle transferred by scp as `ceph-offline-20.2.4-bundle.tar`.
+## Bundle bundle-20.2.4-vip (2026-10-22, Asia/Shanghai)
 
-## Stage a – 1 node, 1 disk: PASSED
-- `install-node.sh`: SHA256SUMS verified, offline apt `--no-download` install, chrony, cephadm 20.2.4, registry on 10.250.0.11:5000, push → tags `["v20.2.4"]`, `cephadm check-host` → `Host looks OK` (`evidence/stageA-install2.log`).
-- Bugs found & fixed during this stage:
-  1. apt `file:` repo + `--no-download` → `E: Internal Error, Pathname to install is not absolute` → debs are now staged into `/var/cache/apt/archives` first.
-  2. First bootstrap failed: `lookup init binary: "catatonit" not found` (podman *Recommends*, dropped by `--no-install-recommends`) → `catatonit` added to `packages.list`, bundle rebuilt (227 debs). (`evidence/stageA-bootstrap.log`)
-- `bootstrap.sh` OK: fsid `b3fcc57b-cd0c-11f1-b843-525400000001`, `mon: 1 daemons, quorum node1`, `mgr: node1.fryujg(active)`, container_image = `10.250.0.11:5000/ceph/ceph@sha256:35c53fcf…` (`evidence/stageA-bootstrap2.log`).
-- `add-osds.sh` preview → `CREATE OSD (wipes vdb)`; with confirm flag → `Created osd(s) 0`; `1 osds: 1 up, 1 in`, `pgs: 1 active+clean`; re-run preview → `skip (already OSD on vdb)` (idempotent).
+Pinned ingress images (Tentacle 20.2.4 `DefaultImages`):
+- `quay.io/ceph/haproxy:2.3` digest `sha256:5479ac79e01ff403396e22ccf0e9e3352ab4518e5164105c2aa1879c5ee2f0b5`
+- `quay.io/ceph/keepalived:2.2.4` digest `sha256:93f9db46da4915288b75b79f8df41a94cda00e7b50b7413a119036ec70430424`
 
-## Stage b – 3 nodes, 1 disk each: PASSED (through 3 MON / 3 OSD)
-Stage b extended the stage-a cluster (node1 re-ran install/bootstrap idempotently); node2/node3 were fresh clean VMs installed from the full rebuilt bundle.
-- node2/3 `install-node.sh` OK, `registry 10.250.0.11:5000 reachable, pull OK`, chrony `^* 10.250.0.11 stratum 10` (`evidence/stageB-install{2,3}.log`).
-- Host add (pubkey appended to node2/3 `authorized_keys`, then `add-hosts.sh --apply`): `node1 _admin,mon,mgr / node2 mon,mgr / node3 mon,mgr`, `3 hosts in cluster`.
-- `ceph mon stat`: `3 mons … quorum 0,1,2 node1,node2,node3`; `ceph mgr stat`: active `node1.fryujg`, `num_standby: 1`.
-- OSDs: `ceph osd tree` hosts node1/node2/node3 each with 1 OSD `up`; `3 osds: 3 up, 3 in` (`evidence/stageB-osds.log`).
-- **CephFS intentionally not validated** (per Alex: goal is a deployable Ceph cluster). `setup-cephfs.sh` is shipped but its MDS/mount result is unverified.
+### Tested on this box
+- [x] Images pulled, saved into `images/*.tar`, tagged as `10.250.0.11:5000/ceph/{haproxy,keepalived}:…`
+- [x] `bash -n` on build/offline scripts
+- [x] `load_conf` resolves VIP placeholders and local registry image refs
+- [x] SHA256SUMS regenerated; tar `ceph-offline-20.2.4-vip-bundle.tar` built (~1.9G)
 
-## Stage c – 3 × 4 disks: NOT RUN (by instruction; also not feasible on box RAM under TCG).
+### Not tested here (residual risk)
+- Full `ceph orch apply ingress` on a live 3-node cluster (no Ceph cluster running on box now)
+- VIP failover / keepalived VRRP on real NICs
+- CSI attaching via VIP (CSI is a separate project)
+- Stock Tentacle ingress uses **HTTP** haproxy mode for non-nfs backends — mon msgr2 path defaults to `INGRESS_KEEPALIVE_ONLY=1`
 
-## Known gaps
-- `.mgr` pool is created by bootstrap before `osd_pool_default_size` is set; `setup-cephfs.sh` now sets `.mgr` to POOL_SIZE/POOL_MIN_SIZE (added after the run, not yet re-tested).
-- `ceph-common` deb is Ubuntu's 19.2.x (client tools only); daemons are 20.2.4 containers.
+## Prior (bundle-20.2.4)
+- Stage a (1 node 1 OSD) and stage b (3 nodes 1 OSD each) passed under QEMU TCG; CephFS not validated per Alex.

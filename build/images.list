@@ -1,0 +1,7 @@
+# Offline container images for Tentacle 20.2.4 (pinned tags + digests recorded at pack time).
+# Format: <name>|<pull ref>|<save basename without .tar>|<digest sha256:...>
+ceph|quay.io/ceph/ceph:v20.2.4|ceph-v20.2.4|pin-at-build
+registry|docker.io/library/registry:2|registry-2|pin-at-build
+# Ingress (cephadm defaults for 20.2.4 — see ceph/cephadm/images.py DefaultImages)
+haproxy|quay.io/ceph/haproxy:2.3|haproxy-2.3|sha256:5479ac79e01ff403396e22ccf0e9e3352ab4518e5164105c2aa1879c5ee2f0b5
+keepalived|quay.io/ceph/keepalived:2.2.4|keepalived-2.2.4|sha256:93f9db46da4915288b75b79f8df41a94cda00e7b50b7413a119036ec70430424

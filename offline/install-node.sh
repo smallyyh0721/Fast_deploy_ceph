@@ -79,11 +79,35 @@ load_ceph_image() {
   fi
   podman tag "$CEPH_IMAGE_SRC" "$CEPH_IMAGE"
 }
+load_ingress_images() {
+  # haproxy + keepalived for cephadm ingress (VIP)
+  if ! has_image "$HAPROXY_IMAGE_SRC"; then
+    [ -s "$BUNDLE_DIR/images/haproxy-${HAPROXY_TAG}.tar" ] || die "missing images/haproxy-${HAPROXY_TAG}.tar"
+    log "podman load haproxy"
+    podman load -i "$BUNDLE_DIR/images/haproxy-${HAPROXY_TAG}.tar"
+  fi
+  podman tag "$HAPROXY_IMAGE_SRC" "$HAPROXY_IMAGE"
+  if ! has_image "$KEEPALIVED_IMAGE_SRC"; then
+    [ -s "$BUNDLE_DIR/images/keepalived-${KEEPALIVED_TAG}.tar" ] || die "missing images/keepalived-${KEEPALIVED_TAG}.tar"
+    log "podman load keepalived"
+    podman load -i "$BUNDLE_DIR/images/keepalived-${KEEPALIVED_TAG}.tar"
+  fi
+  podman tag "$KEEPALIVED_IMAGE_SRC" "$KEEPALIVED_IMAGE"
+}
+push_if_missing() {
+  # $1 = registry path under /v2/  e.g. ceph/haproxy   $2 = tag   $3 = local image ref to push
+  local path="$1" tag="$2" img="$3"
+  if ! curl -fsS "http://$REGISTRY/v2/${path}/tags/list" 2>/dev/null | grep -q "\"${tag}\""; then
+    log "push $img"
+    podman push --tls-verify=false "$img"
+  fi
+}
 
 # --- 6. registry on admin node -------------------------------------------------------
 if [ "$ROLE" = admin ]; then
   has_image docker.io/library/registry:2 || podman load -i "$BUNDLE_DIR/images/registry-2.tar"
   load_ceph_image
+  load_ingress_images
   mkdir -p /var/lib/ceph-local-registry
   cat > /etc/systemd/system/ceph-local-registry.service <<EOU
 [Unit]
@@ -107,13 +131,18 @@ EOU
   systemctl restart ceph-local-registry.service
   for _ in $(seq 1 30); do curl -fsS "http://$REGISTRY/v2/" >/dev/null 2>&1 && break; sleep 1; done
   curl -fsS "http://$REGISTRY/v2/" >/dev/null || die "registry not answering on $REGISTRY"
-  if ! curl -fsS "http://$REGISTRY/v2/ceph/ceph/tags/list" 2>/dev/null | grep -q "v${CEPH_VERSION}"; then
-    log "push $CEPH_IMAGE"
-    podman push --tls-verify=false "$CEPH_IMAGE"
-  fi
+  push_if_missing "ceph/ceph" "v${CEPH_VERSION}" "$CEPH_IMAGE"
+  push_if_missing "ceph/haproxy" "$HAPROXY_TAG" "$HAPROXY_IMAGE"
+  push_if_missing "ceph/keepalived" "$KEEPALIVED_TAG" "$KEEPALIVED_IMAGE"
   curl -fsS "http://$REGISTRY/v2/ceph/ceph/tags/list"; echo
+  curl -fsS "http://$REGISTRY/v2/ceph/haproxy/tags/list"; echo
+  curl -fsS "http://$REGISTRY/v2/ceph/keepalived/tags/list"; echo
 else
-  if [ "$LOAD_IMAGE_ON_ALL_NODES" = 1 ]; then load_ceph_image; fi
+  if [ "$LOAD_IMAGE_ON_ALL_NODES" = 1 ]; then
+    load_ceph_image
+    # ingress images are pulled by cephadm from registry when VIP is applied; optional local load:
+    if [ -s "$BUNDLE_DIR/images/haproxy-${HAPROXY_TAG}.tar" ]; then load_ingress_images; fi
+  fi
   if curl -fsS "http://$REGISTRY/v2/ceph/ceph/tags/list" 2>/dev/null | grep -q "v${CEPH_VERSION}"; then
     podman pull --tls-verify=false -q "$CEPH_IMAGE" >/dev/null && log "registry $REGISTRY reachable, pull OK"
   else

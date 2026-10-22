@@ -23,6 +23,9 @@ ceph_ config set global public_network "$PUBLIC_NETWORK"
 ceph_ config set global osd_pool_default_size "$POOL_SIZE"
 ceph_ config set global osd_pool_default_min_size "$POOL_MIN_SIZE"
 ceph_ config set mgr mgr/cephadm/use_repo_digest true
+# Pin ingress images to local registry (used by setup-ingress-vip.sh / orch apply ingress)
+ceph_ config set mgr mgr/cephadm/container_image_haproxy "$HAPROXY_IMAGE"
+ceph_ config set mgr mgr/cephadm/container_image_keepalived "$KEEPALIVED_IMAGE"
 [ -n "$OSD_MEMORY_TARGET" ] && ceph_ config set osd osd_memory_target "$OSD_MEMORY_TARGET"
 ceph_ orch host label add "$ADMIN_NAME" _admin >/dev/null
 ceph_ orch host label add "$ADMIN_NAME" mon >/dev/null

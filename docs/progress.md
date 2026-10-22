@@ -1,22 +1,16 @@
 # progress (checkpoint)
-- [x] bundle built: /workspace/Fast_deploy_ceph-bundle (1.6G, 226 debs, ceph+registry tars, cephadm 20.2.4, SHA256SUMS)
-- [x] build/ + offline/ scripts written, shellcheck clean; docs/runbook-3node.md
-- [x] /dev/kvm broken (nested kvm_spurious_fault on vcpu create) -> using QEMU TCG
-- [ ] stage a VM node1 (TCG, /workspace/vm, ssh -p 2221 -i /workspace/vm/id root@127.0.0.1)
-- [x] stage a: offline install-node.sh OK in no-internet TCG VM (fix: stage debs in apt cache for --no-download) log vm/stageA-install2.log
-- [!] bootstrap failed: catatonit missing (podman Recommends). Added to packages.list, rebuilding bundle
-- [x] stage a bootstrap OK (fsid b3fcc57b..., container_image=10.250.0.11:5000 digest) vm/stageA-bootstrap2.log
-- [x] stage a: 1 OSD up, HEALTH active+clean, vm/stageA-osd.log
-- stage b: vms 2,3 up
-- stage b: bundle copied to node2/3
-- stage b: node1 reinstall ok
-- stage b: node2 install ok
-- stage b: node3 install ok
-- stage b: bootstrap (idempotent rerun) ok
-- stage b: add hosts FAIL
-- stage b: hosts added
-- stage b: osds created
-- stage b: cephfs ok
-- stage b: DONE
-- [x] stage a PASSED; stage b PASSED through 3 MON / 2 MGR / 3 OSD; CephFS intentionally not validated (Alex)
-- [x] VMs shut down (disk images kept in /workspace/vm); bundle rebuilt 2026-10-21 15:01 UTC+8, SHA256SUMS verified, scripts match HEAD
+
+## 2026-10-22 VIP / ingress offline pack
+- [x] Pin Tentacle 20.2.4 defaults: haproxy:2.3 / keepalived:2.2.4 (+ digests)
+- [x] build/images.list + build-bundle.sh pulls/saves ingress images
+- [x] install-node.sh loads/pushes haproxy+keepalived to node1 registry
+- [x] bootstrap.sh pins mgr/cephadm/container_image_{haproxy,keepalived}
+- [x] offline/setup-ingress-vip.sh (preview default, --apply)
+- [x] cluster.conf.example VIP placeholders; runbook §9 VIP; README
+- [x] Tar + SHA256SUMS rebuilt; Release tag bundle-20.2.4-vip
+- [x] Box validation: image load/tag + script syntax + conf dry parse
+- [!] Live orch apply ingress / VIP failover NOT run on this box (no cluster)
+
+## Prior
+- [x] stage a/b Ceph deploy validated; CephFS intentionally not validated
+- [x] Release bundle-20.2.4 kept; CSI is separate (not this repo)
