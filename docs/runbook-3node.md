@@ -104,19 +104,33 @@ sudo ssh -o BatchMode=yes root@node3 hostname -s   # → node3
 
 建议用上述免密把同一份 `cluster.conf` 和离线包从 node1 `scp` 到 node2/3。
 
-### 3.3 Bootstrap 之后：安装 cephadm 公钥（加主机前必做）
+### 3.3 Bootstrap 之后：把免密加到 `ceph.pub`（加主机前必做）
 
-`bootstrap.sh` 会在 node1 生成 `/etc/ceph/ceph.pub`。加 node2/3 **之前**必须装上（与 3.2 的运维密钥不是同一把）：
+**现场易错点（已踩过）：**
+
+| 情况 | 说明 |
+|---|---|
+| `sudo ssh node2` 已通，但 `ceph orch host add` 报 `Permission denied` / `Auth failed for user root` | 运维钥（§3.2）已通；cephadm **只用** `/etc/ceph/ceph.pub`，两把钥匙，缺一把就会失败 |
+| 在 node2/node3 上执行 `ssh-copy-id -i /etc/ceph/ceph.pub` | 文件不存在。`ceph.pub` **只在 bootstrap 节点（node1）**；命令必须在 **node1** 跑 |
+| 在 node2 上跑 `ceph orch host add` | node2 还不是 admin，会报 cluster/conf 找不到。`host add` 只在 **node1** 执行 |
+
+`bootstrap.sh` 在 node1 生成 `/etc/ceph/ceph.pub`。加主机前必须把它装进 node2/node3 的 `root` `authorized_keys`（与 §3.2 运维钥并存，`-f` 追加不覆盖）：
 
 ```bash
-# node1 上执行
+# ===== 全部在 node1（bootstrap 节点）执行 =====
+sudo ls -l /etc/ceph/ceph.pub          # 必须存在；没有则 bootstrap 未完成
+sudo cat /etc/ceph/ceph.pub
+
 sudo ssh-copy-id -f -i /etc/ceph/ceph.pub root@node2
 sudo ssh-copy-id -f -i /etc/ceph/ceph.pub root@node3
-# 或：把 /etc/ceph/ceph.pub 内容追加到 node2/3 的 /root/.ssh/authorized_keys
+# 或：把 /etc/ceph/ceph.pub 整行追加到 node2/3 的 /root/.ssh/authorized_keys
 
+# 必须用 ceph.pub 这把钥验证（不要只用默认 ssh）
 sudo ssh -i /etc/ceph/ceph.pub -o BatchMode=yes -o IdentitiesOnly=yes root@node2 true
 sudo ssh -i /etc/ceph/ceph.pub -o BatchMode=yes -o IdentitiesOnly=yes root@node3 true
 ```
+
+验证通过后再做 §7 `host add`。
 
 ---
 
@@ -185,7 +199,9 @@ cd /opt/ceph-offline/offline && sudo ./bootstrap.sh
 
 ---
 
-## 7. 加主机（node1）
+## 7. 加主机（仅 node1）
+
+**前置：** §3.3 已用 `/etc/ceph/ceph.pub` 打通 node1→node2/node3；未做会 `Auth failed for user root`。
 
 ```bash
 ./add-hosts.sh                  # 只打印命令（推荐按打印手工执行）
