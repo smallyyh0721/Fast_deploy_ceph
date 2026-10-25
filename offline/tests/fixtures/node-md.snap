@@ -1,0 +1,20 @@
+@@LSBLK
+{"blockdevices":[
+ {"name":"sde","kname":"sde","path":"/dev/sde","size":480103981056,"model":"M","serial":"MDROOT0001","rota":false,"type":"disk","fstype":null,"mountpoints":[null],"children":[
+   {"name":"sde1","kname":"sde1","path":"/dev/sde1","size":480000000000,"type":"part","fstype":"linux_raid_member","mountpoints":[null],"children":[
+     {"name":"md0","kname":"md0","path":"/dev/md0","size":480000000000,"type":"raid1","fstype":"ext4","mountpoints":["/"]}]}]},
+ {"name":"sdf","kname":"sdf","path":"/dev/sdf","size":480103981056,"model":"M","serial":"MDROOT0002","rota":false,"type":"disk","fstype":null,"mountpoints":[null],"children":[
+   {"name":"sdf1","kname":"sdf1","path":"/dev/sdf1","size":480000000000,"type":"part","fstype":"linux_raid_member","mountpoints":[null],"children":[
+     {"name":"md0","kname":"md0","path":"/dev/md0","size":480000000000,"type":"raid1","fstype":"ext4","mountpoints":["/"]}]}]}
+]}
+@@ROOTDISKS
+sde
+sdf
+@@PVS
+@@LVS
+@@RESOLVE
+/dev/disk/by-id/ata-MDA|/dev/sde
+/dev/disk/by-id/ata-MDB|/dev/sdf
+/dev/disk/by-id/md-name-root|/dev/md0
+@@SIG
+@@END

@@ -1,0 +1,50 @@
+@@LSBLK
+{"blockdevices": [
+ {"name":"sda","kname":"sda","path":"/dev/sda","size":480103981056,"model":"SAMSUNG MZ7L3480","serial":"S6ROOT0001","rota":false,"type":"disk","fstype":null,"mountpoints":[null],"pkname":null,
+  "children":[
+   {"name":"sda1","kname":"sda1","path":"/dev/sda1","size":1127219200,"model":null,"serial":null,"rota":false,"type":"part","fstype":"vfat","mountpoints":["/boot/efi"],"pkname":"sda"},
+   {"name":"sda2","kname":"sda2","path":"/dev/sda2","size":2147483648,"model":null,"serial":null,"rota":false,"type":"part","fstype":"ext4","mountpoints":["/boot"],"pkname":"sda"},
+   {"name":"sda3","kname":"sda3","path":"/dev/sda3","size":476000000000,"model":null,"serial":null,"rota":false,"type":"part","fstype":"LVM2_member","mountpoints":[null],"pkname":"sda",
+    "children":[{"name":"ubuntu--vg-ubuntu--lv","kname":"dm-0","path":"/dev/mapper/ubuntu--vg-ubuntu--lv","size":476000000000,"model":null,"serial":null,"rota":false,"type":"lvm","fstype":"ext4","mountpoints":["/"],"pkname":"sda3"}]}
+  ]},
+ {"name":"nvme0n1","kname":"nvme0n1","path":"/dev/nvme0n1","size":3840755982336,"model":"INTEL SSDPE2KX040T8","serial":"PHLJ0000CLEAN","rota":false,"type":"disk","fstype":null,"mountpoints":[null],"pkname":null},
+ {"name":"nvme1n1","kname":"nvme1n1","path":"/dev/nvme1n1","size":3840755982336,"model":"INTEL SSDPE2KX040T8","serial":"PHLJ0000OLDX","rota":false,"type":"disk","fstype":null,"mountpoints":[null],"pkname":null,
+  "children":[{"name":"nvme1n1p1","kname":"nvme1n1p1","path":"/dev/nvme1n1p1","size":3840000000000,"model":null,"serial":null,"rota":false,"type":"part","fstype":"xfs","mountpoints":[null],"pkname":"nvme1n1"}]},
+ {"name":"nvme2n1","kname":"nvme2n1","path":"/dev/nvme2n1","size":3840755982336,"model":"INTEL SSDPE2KX040T8","serial":"PHLJ000OSD01","rota":false,"type":"disk","fstype":"LVM2_member","mountpoints":[null],"pkname":null,
+  "children":[{"name":"ceph--aaa-osd--block--1","kname":"dm-1","path":"/dev/mapper/ceph--aaa-osd--block--1","size":3840000000000,"model":null,"serial":null,"rota":false,"type":"lvm","fstype":null,"mountpoints":[null],"pkname":"nvme2n1"}]},
+ {"name":"nvme3n1","kname":"nvme3n1","path":"/dev/nvme3n1","size":3840755982336,"model":"INTEL SSDPE2KX040T8","serial":"PHLJ000OTHER","rota":false,"type":"disk","fstype":"LVM2_member","mountpoints":[null],"pkname":null,
+  "children":[{"name":"ceph--bbb-osd--block--2","kname":"dm-2","path":"/dev/mapper/ceph--bbb-osd--block--2","size":3840000000000,"model":null,"serial":null,"rota":false,"type":"lvm","fstype":null,"mountpoints":[null],"pkname":"nvme3n1"}]},
+ {"name":"sdb","kname":"sdb","path":"/dev/sdb","size":1000204886016,"model":"ST1000","serial":"ZA1DATAVG","rota":true,"type":"disk","fstype":"LVM2_member","mountpoints":[null],"pkname":null,
+  "children":[{"name":"data-lv0","kname":"dm-3","path":"/dev/mapper/data-lv0","size":1000000000000,"model":null,"serial":null,"rota":true,"type":"lvm","fstype":"xfs","mountpoints":[null],"pkname":"sdb"}]},
+ {"name":"sdc","kname":"sdc","path":"/dev/sdc","size":1000204886016,"model":"ST1000","serial":"ZA1MDMEMB","rota":true,"type":"disk","fstype":"linux_raid_member","mountpoints":[null],"pkname":null,
+  "children":[{"name":"md127","kname":"md127","path":"/dev/md127","size":1000000000000,"model":null,"serial":null,"rota":true,"type":"raid1","fstype":null,"mountpoints":[null],"pkname":"sdc"}]},
+ {"name":"sdd","kname":"sdd","path":"/dev/sdd","size":1000204886016,"model":"ST1000","serial":"ZA1SWAPDK","rota":true,"type":"disk","fstype":"swap","mountpoints":[null],"pkname":null}
+]}
+@@ROOTDISKS
+@@PVS
+/dev/sda3|ubuntu-vg
+/dev/nvme2n1|ceph-aaa
+/dev/nvme3n1|ceph-bbb
+/dev/sdb|data
+@@LVS
+ubuntu-vg|
+ceph-aaa|ceph.block_device=/dev/ceph-aaa/osd-block-1,ceph.cluster_fsid=11111111-2222-3333-4444-555555555555,ceph.osd_fsid=abc,ceph.osd_id=0
+ceph-bbb|ceph.cluster_fsid=99999999-0000-0000-0000-000000000000,ceph.osd_fsid=def,ceph.osd_id=7
+data|
+@@RESOLVE
+/dev/disk/by-id/ata-SAMSUNG_ROOT|/dev/sda
+/dev/disk/by-id/nvme-CLEAN|/dev/nvme0n1
+/dev/disk/by-id/nvme-OLD|/dev/nvme1n1
+/dev/disk/by-id/nvme-OSD|/dev/nvme2n1
+/dev/disk/by-id/nvme-OTHER|/dev/nvme3n1
+/dev/disk/by-id/ata-DATAVG|/dev/sdb
+/dev/disk/by-id/ata-MD|/dev/sdc
+/dev/disk/by-id/ata-SWAP|/dev/sdd
+/dev/disk/by-id/ata-SAMSUNG_ROOT-part3|/dev/sda3
+/dev/disk/by-id/nvme-CLEAN-alias|/dev/nvme0n1
+/dev/disk/by-id/nvme-MISSING|
+/dev/nvme0n1|/dev/nvme0n1
+@@SIG
+nvme1n1|gpt@0x200 
+nvme0n1|
+@@END
