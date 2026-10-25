@@ -74,3 +74,43 @@ CLIENT_RW="modelwriter"
 
 # Extra (testing only): osd_memory_target in bytes, "" = Ceph default (4 GiB)
 OSD_MEMORY_TARGET=""
+
+# =====================================================================================
+# One-click deploy (./deploy.sh) — fields below are NEW and optional; everything above
+# keeps its old meaning, and the per-step scripts still work exactly as before.
+# =====================================================================================
+# chrony/NTP is assumed already correct on every node: 0 = install-node.sh does not touch
+# chrony and validate.sh does not check it. 1 = old behaviour (node1 serves time).
+MANAGE_CHRONY=0
+# OSD_DEVICES entries may carry an optional class: "node1:/dev/disk/by-id/nvme-X:nvme".
+# Every OSD is collocated (data+WAL+DB on the same disk). Only /dev/disk/by-id paths.
+OSD_UP_TIMEOUT=900                        # seconds deploy waits for planned OSDs to be up
+
+# Pools
+PG_AUTOSCALE="on"                         # on | warn | off (off: pg_num below is final)
+TARGET_PG_PER_OSD=100                     # validate.sh fails if PG replicas/OSD > 2.5x this
+# RBD pools: "name:pg_num:size:target_size_ratio" (size "" = POOL_SIZE; ratio "" = none)
+RBD_POOLS=( "rbd:128:3:0.6" )
+
+# RGW (S3). Hosts get label "rgw"; service = rgw.$RGW_SERVICE_ID
+ENABLE_RGW=0
+RGW_REALM="default"; RGW_ZONEGROUP="default"; RGW_ZONE="default"
+RGW_SERVICE_ID="main"
+RGW_HOSTS=(node2 node3)
+RGW_PORT=8080                             # radosgw beast port on each RGW host
+RGW_DATA_PG=64                            # pg_num for default.rgw.buckets.data (pre-created)
+# RGW own VIP via cephadm ingress (haproxy + keepalived, images from local registry)
+RGW_INGRESS=0
+RGW_VIP=""                                # bare IP, e.g. 10.250.0.20 (must differ from VIP_ADDR)
+RGW_VIP_CIDR=24
+RGW_VIP_INTERFACE_NETWORK=""              # "" = PUBLIC_NETWORK
+RGW_FRONTEND_PORT=80                      # S3 endpoint http://RGW_VIP:RGW_FRONTEND_PORT
+RGW_MONITOR_PORT=1968                     # haproxy stats (mon ingress uses 1967)
+RGW_VRRP_ROUTER_ID=60                     # keepalived first_virtual_router_id (mon ingress default 50)
+
+# Mon VIP (setup-ingress-vip.sh, VIP_* fields above) during deploy.sh: 1 = apply
+ENABLE_MON_VIP=0
+
+# CephFS during deploy.sh: 1 = run setup-cephfs.sh (FS_* fields above)
+ENABLE_CEPHFS=0
+MDS_HOSTS=()                              # e.g. (node1 node2); () = any MDS_COUNT hosts

@@ -2,12 +2,14 @@
 # Run as root on EVERY node (node1 first). Idempotent; safe to re-run.
 #   sudo ./install-node.sh            # verify bundle, install debs, chrony, cephadm, images
 #   sudo ./install-node.sh --skip-verify
+#   sudo ./install-node.sh --verify-payload   # check only debs/images/bin sums (offline/ scripts updated from git)
+# chrony is NOT touched unless MANAGE_CHRONY=1 in cluster.conf (default 0: NTP assumed already OK).
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 need_root; load_conf
 
 SKIP_VERIFY=0
-for a in "$@"; do case $a in --skip-verify) SKIP_VERIFY=1;; *) die "unknown arg $a";; esac; done
+for a in "$@"; do case $a in --skip-verify) SKIP_VERIFY=1;; --verify-payload) SKIP_VERIFY=2;; *) die "unknown arg $a";; esac; done
 
 IDX=$(self_index)
 [ "$IDX" -ge 0 ] || die "hostname -s '$(hostname -s)' not in NODE_NAMES (${NODE_NAMES[*]})"
@@ -26,6 +28,9 @@ ip -o addr | grep -qw "$MY_IP" || die "IP $MY_IP not configured on this host"
 if [ "$SKIP_VERIFY" -eq 0 ]; then
   log "verifying SHA256SUMS (takes a minute)"
   ( cd "$BUNDLE_DIR" && sha256sum --quiet -c SHA256SUMS ) || die "checksum mismatch"
+elif [ "$SKIP_VERIFY" -eq 2 ]; then
+  log "verifying SHA256SUMS for debs/ images/ bin/ only"
+  ( cd "$BUNDLE_DIR" && grep -E '  (debs|images|bin)/' SHA256SUMS | sha256sum --quiet -c - ) || die "checksum mismatch"
 fi
 
 # --- 2. local apt repo + packages ----------------------------------------------
@@ -43,21 +48,25 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-download --no-install-
 
 # --- 3. ssh + time --------------------------------------------------------------
 systemctl enable --now ssh >/dev/null 2>&1 || systemctl enable --now ssh.socket
-CHRONY=/etc/chrony/conf.d/ceph-offline.conf
-mkdir -p /etc/chrony/conf.d /etc/chrony/sources.d
-# disable default internet pools (unreachable anyway)
-sed -i 's/^\(pool .*\)$/# offline: \1/' /etc/chrony/chrony.conf
-if [ "$ROLE" = admin ]; then
-  {
-    echo "# managed by Fast_deploy_ceph: node1 is the cluster time source"
-    [ -n "$UPSTREAM_NTP" ] && echo "server $UPSTREAM_NTP iburst"
-    echo "local stratum 10"
-    echo "allow $NTP_ALLOW"
-  } > "$CHRONY"
+if [ "$MANAGE_CHRONY" = 1 ]; then
+  CHRONY=/etc/chrony/conf.d/ceph-offline.conf
+  mkdir -p /etc/chrony/conf.d /etc/chrony/sources.d
+  # disable default internet pools (unreachable anyway)
+  sed -i 's/^\(pool .*\)$/# offline: \1/' /etc/chrony/chrony.conf
+  if [ "$ROLE" = admin ]; then
+    {
+      echo "# managed by Fast_deploy_ceph: node1 is the cluster time source"
+      [ -n "$UPSTREAM_NTP" ] && echo "server $UPSTREAM_NTP iburst"
+      echo "local stratum 10"
+      echo "allow $NTP_ALLOW"
+    } > "$CHRONY"
+  else
+    printf '# managed by Fast_deploy_ceph\nserver %s iburst\n' "$ADMIN_IP" > "$CHRONY"
+  fi
+  systemctl enable chrony >/dev/null 2>&1; systemctl restart chrony
 else
-  printf '# managed by Fast_deploy_ceph\nserver %s iburst\n' "$ADMIN_IP" > "$CHRONY"
+  log "chrony: not managed (MANAGE_CHRONY=0)"
 fi
-systemctl enable chrony >/dev/null 2>&1; systemctl restart chrony
 
 # --- 4. cephadm ---------------------------------------------------------------
 install -m 0755 "$BUNDLE_DIR/bin/cephadm" /usr/local/sbin/cephadm

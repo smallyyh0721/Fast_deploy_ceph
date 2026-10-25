@@ -36,6 +36,46 @@ load_conf() {
   INGRESS_MONITOR_PORT=${INGRESS_MONITOR_PORT:-1967}
   INGRESS_KEEPALIVE_ONLY=${INGRESS_KEEPALIVE_ONLY:-1}
   INGRESS_SERVICE_ID=${INGRESS_SERVICE_ID:-mon}
+  # --- one-click (deploy.sh) fields; all optional, old configs keep working ----
+  MANAGE_CHRONY=${MANAGE_CHRONY:-0}; UPSTREAM_NTP=${UPSTREAM_NTP:-}; NTP_ALLOW=${NTP_ALLOW:-${PUBLIC_NETWORK:-}}
+  RGW_MONITOR_PORT=${RGW_MONITOR_PORT:-1968}; RGW_VRRP_ROUTER_ID=${RGW_VRRP_ROUTER_ID:-60}; RGW_DATA_PG=${RGW_DATA_PG:-64}
+  CLUSTER_NETWORK=${CLUSTER_NETWORK:-}; OSD_MEMORY_TARGET=${OSD_MEMORY_TARGET:-}; LOAD_IMAGE_ON_ALL_NODES=${LOAD_IMAGE_ON_ALL_NODES:-1}
+  POOL_SIZE=${POOL_SIZE:-3}; POOL_MIN_SIZE=${POOL_MIN_SIZE:-2}
+  PG_AUTOSCALE=${PG_AUTOSCALE:-on}
+  TARGET_PG_PER_OSD=${TARGET_PG_PER_OSD:-100}
+  declare -p RBD_POOLS >/dev/null 2>&1 || RBD_POOLS=()
+  ENABLE_RGW=${ENABLE_RGW:-0}
+  RGW_REALM=${RGW_REALM:-default}; RGW_ZONEGROUP=${RGW_ZONEGROUP:-default}; RGW_ZONE=${RGW_ZONE:-default}
+  RGW_SERVICE_ID=${RGW_SERVICE_ID:-main}
+  declare -p RGW_HOSTS >/dev/null 2>&1 || RGW_HOSTS=()
+  RGW_PORT=${RGW_PORT:-8080}
+  RGW_INGRESS=${RGW_INGRESS:-0}
+  RGW_VIP=${RGW_VIP:-${RGW_VIP_ADDR:-}}; RGW_VIP_CIDR=${RGW_VIP_CIDR:-24}
+  RGW_VIP_INTERFACE_NETWORK=${RGW_VIP_INTERFACE_NETWORK:-${PUBLIC_NETWORK:-}}
+  RGW_FRONTEND_PORT=${RGW_FRONTEND_PORT:-80}; RGW_MONITOR_PORT=${RGW_MONITOR_PORT:-1968}
+  ENABLE_MON_VIP=${ENABLE_MON_VIP:-0}
+  ENABLE_CEPHFS=${ENABLE_CEPHFS:-0}
+  declare -p MDS_HOSTS >/dev/null 2>&1 || MDS_HOSTS=()
+  OSD_UP_TIMEOUT=${OSD_UP_TIMEOUT:-900}
+  STATE_DIR=${STATE_DIR:-/var/lib/fast-deploy}
+}
+
+# DRY_RUN=1: mutating commands are printed, not executed.
+DRY_RUN=${DRY_RUN:-0}
+run() {
+  if [ "$DRY_RUN" = 1 ]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi
+}
+# root ssh to a cluster node (key auth only, never prompts)
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
+ssh_node() { local h=$1; shift; ssh "${SSH_OPTS[@]}" "root@$h" "$@"; }
+# IP of a node name from NODE_NAMES/NODE_IPS
+node_ip() {
+  local i; for i in "${!NODE_NAMES[@]}"; do [ "${NODE_NAMES[$i]}" = "$1" ] && { echo "${NODE_IPS[$i]}"; return 0; }; done; return 1
+}
+# run a command on node (local if it is this host)
+on_node() {
+  local h=$1; shift
+  if [ "$h" = "$(hostname -s)" ]; then bash -c "$*"; else ssh_node "$(node_ip "$h" || echo "$h")" "$*"; fi
 }
 
 need_root() { [ "$(id -u)" -eq 0 ] || die "run as root (sudo)"; }
