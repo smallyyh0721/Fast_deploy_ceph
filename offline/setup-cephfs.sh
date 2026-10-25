@@ -25,7 +25,12 @@ for p in "$META_POOL:$META_PG" "$DATA_POOL:$DATA_PG"; do
 done
 ceph_ fs ls --format json | jq -e --arg f "$FS_NAME" '.[] | select(.name==$f)' >/dev/null \
   || ceph_ fs new "$FS_NAME" "$META_POOL" "$DATA_POOL"
-ceph_ orch apply mds "$FS_NAME" --placement="$MDS_COUNT"
+if [ "${#MDS_HOSTS[@]}" -gt 0 ]; then
+  for h in "${MDS_HOSTS[@]}"; do ceph_ orch host label add "$h" mds >/dev/null; done
+  ceph_ orch apply mds "$FS_NAME" --placement="$MDS_COUNT label:mds"
+else
+  ceph_ orch apply mds "$FS_NAME" --placement="$MDS_COUNT"
+fi
 ceph_ fs set "$FS_NAME" max_mds 1
 ceph_ auth get "client.$CLIENT_RO" >/dev/null 2>&1 || ceph_ fs authorize "$FS_NAME" "client.$CLIENT_RO" / r
 ceph_ auth get "client.$CLIENT_RW" >/dev/null 2>&1 || ceph_ fs authorize "$FS_NAME" "client.$CLIENT_RW" / rw
