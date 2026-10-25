@@ -5,6 +5,10 @@
 > **目标**：3 MON + 2 MGR + 12 OSD；生产 **VIP**（cephadm ingress：haproxy + keepalived 容器）；默认副本 **size=3 / min_size=2**。首选 **RBD**；CephFS 见 [cephfs-client.md](cephfs-client.md)。CSI 离线包另仓，不在本仓库。  
 > **工具**：`build/`（联网机打包）+ `offline/`（现场执行）。示例 IP/主机名以下表为准，按现场改 `cluster.conf`。
 
+> **一键方式**：完成 §2 /etc/hosts、§3.1–3.2 root 免密、§4 各节点解包 + 填 `cluster.conf` 后，node1 执行
+> `sudo ./deploy.sh --dry-run` → `sudo ./deploy.sh`（详见 [oneclick.md](oneclick.md)）。§3.3 ceph.pub 由 hosts 阶段自动分发；
+> OSD 阶段会停下来要求键入 `YES-WIPE-<N>` 与旧数据盘序列号后 4 位。以下为分步手工流程。
+
 ## 0. 参数与步骤
 
 | 项 | 示例 |
@@ -12,16 +16,16 @@
 | 主机名（=`hostname -s`） | `node1` `node2` `node3` |
 | 存储 IP | `10.250.0.11` `.12` `.13`，`PUBLIC_NETWORK=10.250.0.0/24` |
 | Registry | 仅 node1：`10.250.0.11:5000`（HTTP） |
-| 时间 | **node1 为集群 NTP**（`install-node.sh` 自动配置） |
+| 时间 | 现场 NTP 已就绪；`install-node.sh` 默认不改 chrony（`MANAGE_CHRONY=1` 才让 node1 做 NTP 源） |
 | OSD | 每台 4 条 `nodeX:/dev/disk/by-id/...`（严禁系统盘） |
 | 副本 | `POOL_SIZE=3` `POOL_MIN_SIZE=2` |
 | VIP（占位） | `VIP_ADDR=10.250.0.10`，`VIP_INTERFACE_NETWORK=10.250.0.0/24`（cephadm ingress） |
 
 ```text
 存储网 10.250.0.0/24
-  node1 .11  registry:5000 + chrony + MON/MGR + OSD×4（admin）
-  node2 .12  chrony→node1 + MON/MGR + OSD×4
-  node3 .13  chrony→node1 + MON     + OSD×4
+  node1 .11  registry:5000 + MON/MGR + OSD×4（admin）
+  node2 .12  + MON/MGR + OSD×4
+  node3 .13  + MON     + OSD×4
 ```
 
 | 阶段 | 地点 | 动作 | 完成条件 |
@@ -174,7 +178,7 @@ sudo cp cluster.conf.example cluster.conf && sudo vi cluster.conf
 cd /opt/ceph-offline/offline && sudo ./install-node.sh
 ```
 
-脚本会：离线 apt、启用 ssh、**以 node1 为 NTP**、装 cephadm、配置 registry 信任；node1 启动 `10.250.0.11:5000` 并推送 **ceph / haproxy / keepalived** 镜像；各节点 `podman load` 兜底。可重复执行。
+脚本会：离线 apt、启用 ssh、（仅 `MANAGE_CHRONY=1` 时才配置 chrony，默认不动 NTP）、装 cephadm、配置 registry 信任；node1 启动 `10.250.0.11:5000` 并推送 **ceph / haproxy / keepalived** 镜像；各节点 `podman load` 兜底。可重复执行。
 
 验收要点：
 
@@ -231,9 +235,14 @@ sudo cephadm shell -- ceph quorum_status -f json-pretty | grep -A4 quorum_names
 
 ```bash
 sudo cephadm shell -- ceph orch device ls --wide --refresh
-sudo ./add-osds.sh                              # 预览
-sudo ./add-osds.sh --yes-i-really-mean-it       # 擦盘并创建
+sudo ./add-osds.sh                              # 预览：CREATE / NEEDS-ZAP / SKIP / REFUSE 安全表
+sudo ./add-osds.sh --confirm                    # 键入 YES-WIPE-<N> + 旧数据盘序列号后4位 → 写计划
+sudo ./add-osds.sh --apply-plan /var/lib/fast-deploy/osd-plan.txt   # 复核后按计划 zap+创建
+# 旧用法 --yes-i-really-mean-it 仍可用，但同样要求键入确认
 ```
+
+- 根盘/boot/EFI/swap 所在盘（含根在 LVM/md 上）、已挂载、md 成员、非 Ceph LVM、非 by-id 路径一律 REFUSE，不可绕过。
+- OSD 数据/WAL/DB 同盘，不单独放 DB。
 
 - **严禁** `ceph orch apply osd --all-available-devices`。
 - 已是 OSD 的盘会跳过；有旧签名时人工确认后再 `ceph orch device zap ... --force`。
@@ -337,7 +346,7 @@ sudo cephadm shell -- ceph osd pool ls detail
 |---|---|
 | hosts / 主机名 | 三台 `getent hosts` 与 `hostname -s` 一致 |
 | SSH | node1 `BatchMode` root → node2/node3；`ceph.pub` 同样可登录 |
-| 时间 | 无 `MON_CLOCK_SKEW`（node1 为 NTP） |
+| 时间 | 无 `MON_CLOCK_SKEW` |
 | Registry | node2/3 能 pull `10.250.0.11:5000/ceph/ceph:v20.2.4` |
 | MON / MGR | 见 §10.1 |
 | OSD | 见 §10.2 |
