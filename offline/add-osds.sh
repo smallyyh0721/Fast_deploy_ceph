@@ -140,8 +140,10 @@ while IFS='|' read -r a h p k s m se r d; do
     *:SKIP) log "$h $p already an OSD, skip"; continue;;
     *) die "$h $p now $na ($nd); planned $a. Refusing.";;
   esac
-  if [ "$a" = NEEDS-ZAP ]; then run ceph_ orch device zap "$h" "$p" --force; fi
-  run ceph_ orch daemon add osd "$h:$p"
+  # cephadm shell (via ceph_) inherits stdin; without </dev/null it would drain the
+  # remaining lines of PLAN_FILE under `done < "$PLAN_FILE"` and only create osd.0.
+  if [ "$a" = NEEDS-ZAP ]; then run ceph_ orch device zap "$h" "$p" --force </dev/null; fi
+  run ceph_ orch daemon add osd "$h:$p" </dev/null
   N=$((N+1))
 done < "$PLAN_FILE"
 [ "$DRY_RUN" = 1 ] && exit 0
