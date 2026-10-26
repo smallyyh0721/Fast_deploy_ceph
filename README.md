@@ -25,4 +25,5 @@ Ceph CSI is a **separate** offline project — not in this repo.
 Releases:
 - [bundle-20.2.4](https://github.com/smallyyh0721/Fast_deploy_ceph/releases/tag/bundle-20.2.4) (baseline)
 - [bundle-20.2.4-vip](https://github.com/smallyyh0721/Fast_deploy_ceph/releases/tag/bundle-20.2.4-vip) (adds ingress images)
-- [bundle-20.2.4-oneclick](https://github.com/smallyyh0721/Fast_deploy_ceph/releases/tag/bundle-20.2.4-oneclick) (**latest**: same debs/images/bin as -vip, offline/ + docs from main@94f59dc — one-click `deploy.sh`)
+- [bundle-20.2.4-oneclick.1](https://github.com/smallyyh0721/Fast_deploy_ceph/releases/tag/bundle-20.2.4-oneclick.1) (**latest**: same debs/images/bin as -vip; offline/ fixes for `bash -s` probe + OSD plan stdin; one-click `deploy.sh`)
+- [bundle-20.2.4-oneclick](https://github.com/smallyyh0721/Fast_deploy_ceph/releases/tag/bundle-20.2.4-oneclick) (initial one-click; superseded by .1)
