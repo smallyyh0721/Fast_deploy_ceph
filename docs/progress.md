@@ -1,5 +1,13 @@
 # progress (checkpoint)
 
+## 2026-10-26 oneclick.1 live deploy — SUCCESS
+- [x] Release bundle-20.2.4-oneclick.1 deployed unmodified on a 3-node Ubuntu 24.04 cluster
+- [x] `deploy.sh --dry-run`, `validate.sh`, `deploy.sh --yes`; OSD confirm `YES-WIPE-12`
+- [x] `verify: OK`: 12 OSDs up/in, 257 PGs active+clean, RGW ingress VIP `10.11.4.50` serves S3
+- [x] External signed S3 put/get of `nettest/local-test.txt` returned HTTP 200
+- [!] `HEALTH_WARN` only for mon clock skew (~0.40s). `MANAGE_CHRONY=0`; not a script defect
+- Detail: `docs/validation.md`
+
 ## 2026-10-22 VIP / ingress offline pack
 - [x] Pin Tentacle 20.2.4 defaults: haproxy:2.3 / keepalived:2.2.4 (+ digests)
 - [x] build/images.list + build-bundle.sh pulls/saves ingress images
