@@ -50,6 +50,27 @@ confirm_plan() {
   return 0
 }
 
+# Remote probe: copy OUR disk-safety.sh to the node and execute it by path (never
+# `bash -s` / script on ssh stdin, which breaks under ssh -n). Path defaults to
+# $BUNDLE_DIR/offline/disk-safety.sh (override REMOTE_DISK_SAFETY). The copy is atomic:
+# scp to <path>.tmp.<pid>, then mv over the final path, so a partial write never runs.
+probe_host() { # host path... -> snapshot on stdout
+  local h=$1; shift
+  local ip remote tmp args
+  if [ "$h" = "$(hostname -s)" ]; then
+    bash "$HERE/disk-safety.sh" probe "$@"
+    return
+  fi
+  ip=$(node_ip "$h")
+  remote=${REMOTE_DISK_SAFETY:-$BUNDLE_DIR/offline/disk-safety.sh}
+  tmp="$remote.tmp.$$"
+  ssh_node "$ip" "mkdir -p $(printf '%q' "$(dirname "$remote")")"
+  scp -q "${SSH_OPTS[@]}" "$HERE/disk-safety.sh" "root@$ip:$tmp"
+  ssh_node "$ip" "chmod 0755 $(printf '%q' "$tmp") && mv -f $(printf '%q' "$tmp") $(printf '%q' "$remote")"
+  args=$(printf '%q ' "$@")
+  ssh_node "$ip" "bash $(printf '%q' "$remote") probe $args"
+}
+
 [ "${1:-}" = --source-only ] && return 0 2>/dev/null
 
 MODE=preview; ONLY=""; SKIP_REFUSED=0; PLAN_FILE=""
@@ -71,27 +92,6 @@ need_root; load_conf
 mkdir -p "$STATE_DIR"
 PLAN_FILE=${PLAN_FILE:-$STATE_DIR/osd-plan.txt}
 FSID=$(awk '$1=="fsid"{print $3}' /etc/ceph/ceph.conf 2>/dev/null || true)
-
-# Remote path for disk-safety.sh (same place install stage ships offline/*.sh).
-# Always scp our local copy so probe uses this toolkit version; then execute by path
-# (never `bash -s` / never stream the script on ssh stdin — breaks under ssh -n).
-REMOTE_DISK_SAFETY=${REMOTE_DISK_SAFETY:-$BUNDLE_DIR/offline/disk-safety.sh}
-
-probe_host() { # host path... -> snapshot on stdout
-  local h=$1; shift
-  local ip remote args
-  if [ "$h" = "$(hostname -s)" ]; then
-    bash "$HERE/disk-safety.sh" probe "$@"
-    return
-  fi
-  ip=$(node_ip "$h")
-  remote=$REMOTE_DISK_SAFETY
-  ssh_node "$ip" "mkdir -p $(printf '%q' "$(dirname "$remote")")"
-  scp -q "${SSH_OPTS[@]}" "$HERE/disk-safety.sh" "root@$ip:$remote"
-  args=$(printf '%q ' "$@")
-  # ssh_node closes stdin (-n); remote runs the copied file by path
-  ssh_node "$ip" "bash $(printf '%q' "$remote") probe $args"
-}
 
 classify_all() {
   local h e d hosts=() paths snap

@@ -95,7 +95,7 @@ ceph_ config set mgr mgr/cephadm/container_image_keepalived "$KEEPALIVED_IMAGE"
 ceph_ config set mgr mgr/cephadm/use_repo_digest true
 
 log "ceph orch apply -i ingress spec"
-cephadm shell -m "$SPEC_FILE":/tmp/ingress.yaml -- ceph orch apply -i /tmp/ingress.yaml
+cephadm shell -m "$SPEC_FILE":/tmp/ingress.yaml -- ceph orch apply -i /tmp/ingress.yaml </dev/null
 
 log "wait briefly and show daemons"
 sleep 3

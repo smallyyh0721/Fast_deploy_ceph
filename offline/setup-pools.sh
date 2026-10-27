@@ -31,7 +31,7 @@ for e in "${RBD_POOLS[@]}"; do
   run ceph_ osd pool set "$name" pg_autoscale_mode "$PG_AUTOSCALE"
   [ -n "${ratio:-}" ] && run ceph_ osd pool set "$name" target_size_ratio "$ratio"
   run ceph_ osd pool application enable "$name" rbd
-  run cephadm shell -- rbd pool init "$name"
+  run cephadm shell -- rbd pool init "$name" </dev/null
 done
 [ "$DRY_RUN" = 1 ] || ceph_ osd pool ls detail
 log "setup-pools.sh done"

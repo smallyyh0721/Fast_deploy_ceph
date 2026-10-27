@@ -94,10 +94,9 @@ run() {
 # Default StrictHostKeyChecking=accept-new (first connect pins the key). For pinned-only:
 #   SSH_STRICT_HOSTKEY=1
 #   SSH_KNOWN_HOSTS=/path/to/known_hosts   # optional UserKnownHostsFile (ssh-keyscan to populate)
-# Env and cluster.conf both work; load_conf rebuilds SSH_OPTS after sourcing conf.
-SSH_CONNECT_TIMEOUT=${SSH_CONNECT_TIMEOUT:-8}
-SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY:-0}
-SSH_KNOWN_HOSTS=${SSH_KNOWN_HOSTS:-}
+# Precedence: assignment in cluster.conf > exported env > default (load_conf rebuilds SSH_OPTS).
+# (No top-level defaults here: an unset var stays unset until load_conf, so a conf line
+# SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY-1} can supply a default that env still overrides.)
 ssh_build_opts() {
   local strict=${SSH_STRICT_HOSTKEY:-0} kh=${SSH_KNOWN_HOSTS:-} ct=${SSH_CONNECT_TIMEOUT:-8}
   SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout="$ct")

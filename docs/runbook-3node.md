@@ -112,7 +112,7 @@ sudo ssh -o BatchMode=yes root@node3 hostname -s   # → node3
 
 ### 3.2.1 严格主机密钥（可选）
 
-一键脚本默认 `StrictHostKeyChecking=accept-new`（首次连接写入 known_hosts）。若现场禁止 AcceptNew、只认已钉扎密钥，在 `cluster.conf`（或环境变量）中：
+一键脚本默认 `StrictHostKeyChecking=accept-new`（首次连接写入 known_hosts）。若现场禁止 AcceptNew、只认已钉扎密钥，在 `cluster.conf` 中取消注释（或用环境变量，如 `sudo SSH_STRICT_HOSTKEY=1 SSH_KNOWN_HOSTS=... ./deploy.sh`；`sudo` 默认会丢掉已 export 的变量）。优先级：`cluster.conf` 赋值 > 环境变量 > 默认：
 
 ```bash
 SSH_STRICT_HOSTKEY=1
@@ -128,7 +128,7 @@ sudo ssh-keyscan -t ed25519,rsa node2 node3 10.250.0.12 10.250.0.13   | sudo tee
 sudo ssh -o BatchMode=yes -o StrictHostKeyChecking=yes   -o UserKnownHostsFile=/etc/fast-deploy/known_hosts root@node2 true
 ```
 
-`lib.sh` 的 `ssh_node` 使用 `ssh -n`（关闭 stdin）；需要喂 stdin 的少数路径（如 s3-bgp 打包传输）走 `ssh_node_in`。OSD 盘探测把 `disk-safety.sh` scp 到 `$BUNDLE_DIR/offline/` 再按路径执行，不依赖 `bash -s`。
+`lib.sh` 的 `ssh_node` 使用 `ssh -n`（关闭 stdin）；需要喂 stdin 的少数路径（如 s3-bgp 打包传输）走 `ssh_node_in`。OSD 盘探测把 `disk-safety.sh` scp 到 `$BUNDLE_DIR/offline/disk-safety.sh.tmp.<pid>`，再 `mv` 成正式文件（原子替换）后按路径执行，不依赖 `bash -s`。
 
 ### 3.3 Bootstrap 之后：把免密加到 `ceph.pub`（加主机前必做）
 

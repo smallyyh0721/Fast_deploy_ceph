@@ -94,4 +94,76 @@ o=$(opts_of '')
 if grep -E 'run ssh "\$\{SSH_OPTS' "$T/../deploy.sh" | grep -qvE '^[[:space:]]*#'; then
   fail=$((fail+1)); echo "FAIL deploy.sh still uses ssh without ssh_node/-n"
 else pass=$((pass+1)); echo "ok   deploy install uses ssh_node"; fi
+
+# ---- env vs conf precedence (conf assignment > exported env > default) ----
+OFF=$T/..
+cat > "$W/base.conf" <<'C'
+NODE_NAMES=(node1); NODE_IPS=(127.0.0.1); PUBLIC_NETWORK=127.0.0.0/8
+CEPH_VERSION=20.2.4; REGISTRY_PORT=5000; BUNDLE_DIR=/opt/ceph-offline
+OSD_DEVICES=("node1:/dev/disk/by-id/x"); POOL_SIZE=1; POOL_MIN_SIZE=1
+C
+optsx() { # optsx CONFFILE [VAR=val ...]  -> SSH_OPTS with given *environment* (not set in-script)
+  local cf=$1; shift
+  env -i PATH="$PATH" HOME="$HOME" CONF="$cf" "$@" bash -c '
+    set -euo pipefail
+    . "'"$LIB"'"
+    load_conf
+    printf "%s\n" "${SSH_OPTS[*]}"
+  '
+}
+chk() { # name cond-result
+  if [ "$2" = 0 ]; then pass=$((pass+1)); echo "ok   $1"; else fail=$((fail+1)); echo "FAIL $1: $o"; fi
+}
+# cluster.conf.example must not hard-assign the SSH knobs (would silently override env)
+if grep -qE '^[[:space:]]*(SSH_STRICT_HOSTKEY|SSH_KNOWN_HOSTS|SSH_CONNECT_TIMEOUT)=' "$OFF/cluster.conf.example"; then
+  fail=$((fail+1)); echo "FAIL cluster.conf.example hard-assigns SSH_* knobs"
+else pass=$((pass+1)); echo "ok   cluster.conf.example leaves SSH_* knobs commented"; fi
+# example's SSH block (commented) appended to a base conf: env must win
+{ cat "$W/base.conf"; sed -n '/^# SSH from node1/,/sudo drops env/p' "$OFF/cluster.conf.example"; } > "$W/ex.conf"
+if grep -q 'SSH_STRICT_HOSTKEY' "$W/ex.conf"; then r=0; else r=1; fi; chk "example SSH block extracted" $r
+o=$(optsx "$W/ex.conf"); if [[ $o == *accept-new* && $o != *UserKnownHostsFile* ]]; then r=0; else r=1; fi; chk "example conf, no env -> accept-new default" $r
+o=$(optsx "$W/ex.conf" SSH_STRICT_HOSTKEY=1 SSH_KNOWN_HOSTS=/env/kh)
+if [[ $o == *StrictHostKeyChecking=yes* && $o == *UserKnownHostsFile=/env/kh* && $o != *accept-new* ]]; then r=0; else r=1; fi; chk "example conf + env strict/known_hosts -> env applies" $r
+o=$(optsx "$W/base.conf" SSH_STRICT_HOSTKEY=yes); if [[ $o == *StrictHostKeyChecking=yes* ]]; then r=0; else r=1; fi; chk "env SSH_STRICT_HOSTKEY=yes accepted" $r
+o=$(optsx "$W/base.conf" SSH_CONNECT_TIMEOUT=3); if [[ $o == *ConnectTimeout=3* ]]; then r=0; else r=1; fi; chk "env SSH_CONNECT_TIMEOUT applies" $r
+# explicit conf assignment beats env (documented precedence)
+{ cat "$W/base.conf"; printf 'SSH_STRICT_HOSTKEY=0\nSSH_KNOWN_HOSTS=/conf/kh\n'; } > "$W/cw.conf"
+o=$(optsx "$W/cw.conf" SSH_STRICT_HOSTKEY=1 SSH_KNOWN_HOSTS=/env/kh)
+if [[ $o == *accept-new* && $o == *UserKnownHostsFile=/conf/kh* && $o != */env/kh* ]]; then r=0; else r=1; fi; chk "conf assignment overrides env" $r
+{ cat "$W/base.conf"; printf 'SSH_STRICT_HOSTKEY=1\n'; } > "$W/cs.conf"
+o=$(optsx "$W/cs.conf"); if [[ $o == *StrictHostKeyChecking=yes* ]]; then r=0; else r=1; fi; chk "conf-only strict" $r
+# ${VAR-default} form in conf lets env override (documented opt-in)
+{ cat "$W/base.conf"; printf 'SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY-1}\n'; } > "$W/cd.conf"
+o=$(optsx "$W/cd.conf"); if [[ $o == *StrictHostKeyChecking=yes* ]]; then r=0; else r=1; fi; chk "conf \${VAR-1} default when env unset" $r
+o=$(optsx "$W/cd.conf" SSH_STRICT_HOSTKEY=0); if [[ $o == *accept-new* ]]; then r=0; else r=1; fi; chk "conf \${VAR-1} -> env 0 wins" $r
+# ---- every cephadm shell call closes stdin (drains while-read loops otherwise) ----
+o=$(grep -nE '(^|[^-_[:alnum:]])cephadm shell' "$OFF"/*.sh "$OFF"/s3-bgp/*.sh \
+      | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' \
+      | grep -vE '(echo|log) "[^"]*cephadm shell|CMDS\+=\("cephadm shell' \
+      | grep -v '</dev/null' || true)
+if [ -z "$o" ]; then r=0; else r=1; fi; chk "no bare cephadm shell without </dev/null in offline/*.sh" $r
+o=setup-pools; if grep -q 'run cephadm shell -- rbd pool init "$name" </dev/null' "$OFF/setup-pools.sh"; then r=0; else r=1; fi; chk "setup-pools rbd pool init closes stdin" $r
+o=setup-rgw; if grep -qE '^rgwadm\(\) \{ cephadm shell -- radosgw-admin "\$@" </dev/null; \}' "$OFF/setup-rgw.sh"; then r=0; else r=1; fi; chk "setup-rgw rgwadm closes stdin" $r
+o=verify; if grep -q 'cephadm shell -- "${w\[@\]}" </dev/null' "$OFF/verify.sh"; then r=0; else r=1; fi; chk "verify.sh CHECKS loop closes stdin" $r
+# behavioural: a read loop calling the stdin-closed helpers is not drained
+o=$(env -i PATH="$PATH" bash -c '
+  cephadm() { cat >/dev/null; }      # mock: drains stdin like `cephadm shell` does
+  rgwadm() { cephadm shell -- radosgw-admin "$@" </dev/null; }
+  n=0; while read -r _; do rgwadm x; n=$((n+1)); done <<<"$(printf "a\nb\nc\n")"; echo $n')
+if [ "$o" = 3 ]; then r=0; else r=1; fi; chk "read loop survives stdin-closed cephadm (3 iterations)" $r
+# ---- remote disk-safety.sh copy is atomic: scp to .tmp then mv ----
+o=$(env -i PATH="$PATH" HOME="$HOME" bash -c '
+  set -euo pipefail
+  . "'"$OFF"'/add-osds.sh" --source-only
+  BUNDLE_DIR=/opt/b
+  hostname() { echo adminnode; }
+  node_ip() { echo 10.9.9.2; }
+  ssh_node() { shift; echo "SSH $*"; }
+  scp() { echo "SCP ${*: -2}"; }
+  probe_host node2 /dev/disk/by-id/a 2>&1')
+tmpl=$(sed -n 's/^SCP .* root@10\.9\.9\.2:\(.*\)$/\1/p' <<<"$o")
+if [[ $tmpl == /opt/b/offline/disk-safety.sh.tmp.* ]]; then r=0; else r=1; fi; chk "scp targets <path>.tmp.*" $r
+if grep -q "mv -f $tmpl /opt/b/offline/disk-safety.sh" <<<"$o"; then r=0; else r=1; fi; chk "ssh mv tmp -> final path" $r
+if [ "$(grep -cE '^SSH mkdir|^SCP|mv -f|^SSH bash ' <<<"$o")" = 4 ] && [[ $(grep -nE '' <<<"$o" | awk -F: '/SSH mkdir/{a=$1}/SCP/{b=$1}/mv -f/{c=$1}/SSH bash/{d=$1}END{print (a<b&&b<c&&c<d)?"y":"n"}') == y ]]; then r=0; else r=1; fi; chk "probe order mkdir->scp tmp->mv->bash path" $r
+o=$(grep -nE 'scp .*root@\$ip:\$remote"' "$OFF/add-osds.sh" || true); if [ -z "$o" ]; then r=0; else r=1; fi; chk "add-osds never scps directly onto final path" $r
 echo "passed=$pass failed=$fail"; [ "$fail" -eq 0 ]

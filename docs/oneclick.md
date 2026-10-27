@@ -5,7 +5,7 @@
 ## 前提（validate 阶段会检查）
 - 每个节点：离线包已解压到同一 `BUNDLE_DIR`（`debs/ images/ bin/cephadm images/ceph-v*.tar`）。
 - node1 → 各节点 root SSH 免密（BatchMode），`hostname -s` = `NODE_NAMES`，`/etc/hosts` 解析正确。
-  默认 `StrictHostKeyChecking=accept-new`。若要求只认已钉扎主机密钥：`SSH_STRICT_HOSTKEY=1` + `SSH_KNOWN_HOSTS=/path/to/known_hosts`（用 `ssh-keyscan` 生成；见 `cluster.conf.example` 与 runbook §3）。远程调用走 `ssh -n`（stdin 关闭）；盘探测是 scp `disk-safety.sh` 后按路径执行，不再 `bash -s` 灌脚本。
+  默认 `StrictHostKeyChecking=accept-new`。若要求只认已钉扎主机密钥：`SSH_STRICT_HOSTKEY=1` + `SSH_KNOWN_HOSTS=/path/to/known_hosts`（用 `ssh-keyscan` 生成；见 `cluster.conf.example` 与 runbook §3.2.1）。优先级：`cluster.conf` 中的赋值 > 环境变量 > 默认值；示例里这两项默认注释掉，所以不写就用环境变量（注意 `sudo` 默认不带环境变量，要写成 `sudo SSH_STRICT_HOSTKEY=1 ./deploy.sh`）。远程调用走 `ssh -n`（stdin 关闭）；盘探测是 scp `disk-safety.sh` 到 `<路径>.tmp.<pid>` 再 `mv` 到最终路径（原子替换）后按路径执行，不再 `bash -s` 灌脚本；所有 `cephadm shell` 调用都关闭 stdin（`</dev/null`）。
 - NTP/chrony 视为现场已就绪：**不改写、不检查**（`MANAGE_CHRONY=0`；设 1 恢复旧行为）。
 - 若用 git 新版 `offline/` 覆盖了包内脚本：install 阶段用 `install-node.sh --verify-payload`，只校验 `debs/ images/ bin/` 的 SHA256，不受脚本变更影响。
 

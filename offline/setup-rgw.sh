@@ -10,7 +10,7 @@ for a in "$@"; do case $a in --dry-run) DRY_RUN=1;; *) die "unknown arg $a";; es
 load_conf
 [ "${#RGW_HOSTS[@]}" -gt 0 ] || die "RGW_HOSTS empty"
 SVC="rgw.${RGW_SERVICE_ID}"
-rgwadm() { cephadm shell -- radosgw-admin "$@"; }
+rgwadm() { cephadm shell -- radosgw-admin "$@" </dev/null; }   # stdin closed (cephadm shell drains it)
 have() { [ "$DRY_RUN" = 1 ] && return 1; rgwadm "$1" list 2>/dev/null | jq -e --arg n "$2" '(.realms // .zonegroups // .zones // []) | index($n)' >/dev/null; }
 
 log "labels rgw -> ${RGW_HOSTS[*]}"
@@ -61,7 +61,7 @@ if [ "$RGW_INGRESS" = 1 ]; then
   fi
   run ceph_ config set mgr mgr/cephadm/container_image_haproxy "$HAPROXY_IMAGE"
   run ceph_ config set mgr mgr/cephadm/container_image_keepalived "$KEEPALIVED_IMAGE"
-  run cephadm shell -m "$SPEC":/tmp/rgw-ingress.yaml -- ceph orch apply -i /tmp/rgw-ingress.yaml
+  run cephadm shell -m "$SPEC":/tmp/rgw-ingress.yaml -- ceph orch apply -i /tmp/rgw-ingress.yaml </dev/null
   EP="http://${RGW_VIP}:${RGW_FRONTEND_PORT}"
 else
   EP="http://$(node_ip "${RGW_HOSTS[0]}"):${RGW_PORT}"
