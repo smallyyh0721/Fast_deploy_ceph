@@ -48,7 +48,7 @@ $SUDO chown -R "$(id -u):$(id -g)" "$OUT"
 echo "== copy offline toolkit + docs"
 rm -rf "$OUT/offline" "$OUT/docs"
 cp -r "$REPO/offline" "$REPO/docs" "$OUT/"
-cp "$HERE/packages.list" "$HERE/images.list" "$OUT/offline/"
+cp "$HERE/packages.list" "$HERE/packages-s3-bgp.list" "$HERE/images.list" "$OUT/offline/"
 
 echo "== SHA256SUMS"
 ( cd "$OUT" && find debs images bin offline docs -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/SHA256SUMS.$$ && mv /tmp/SHA256SUMS.$$ SHA256SUMS )

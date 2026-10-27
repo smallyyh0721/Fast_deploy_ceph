@@ -1,0 +1,3 @@
+# Optional S3 BGP/ECMP entry (setup-s3-bgp.sh). Downloaded into the same offline repo
+# (full recursive closure) but installed ONLY on S3_BGP_HOSTS, never by install-node.sh.
+frr

@@ -6,7 +6,12 @@ set -euo pipefail
 OUT=${1:-/out}
 LIST=${2:-/build/packages.list}
 export DEBIAN_FRONTEND=noninteractive
-mapfile -t PKGS < <(grep -Ev '^\s*(#|$)' "$LIST")
+# optional extra lists (e.g. packages-s3-bgp.list next to packages.list) join the same closure
+EXTRA_LISTS=("${@:3}")
+if [ "${#EXTRA_LISTS[@]}" -eq 0 ] && [ -f "$(dirname "$LIST")/packages-s3-bgp.list" ]; then
+  EXTRA_LISTS=("$(dirname "$LIST")/packages-s3-bgp.list")
+fi
+mapfile -t PKGS < <(grep -hEv '^\s*(#|$)' "$LIST" "${EXTRA_LISTS[@]}")
 apt-get update -q
 apt-get install -y -q --no-install-recommends apt-rdepends dpkg-dev >/dev/null
 mkdir -p "$OUT"
