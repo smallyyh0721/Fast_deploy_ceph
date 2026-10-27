@@ -35,7 +35,8 @@ sudo ./deploy.sh --list             # 查看阶段标记
 | 07 | rgw | `setup-rgw.sh`（`ENABLE_RGW=1`）：realm/zonegroup/zone、`orch apply rgw`；`RGW_INGRESS=1` 时 cephadm ingress（haproxy+keepalived）独立 VIP `RGW_VIP` |
 | 08 | cephfs | `setup-cephfs.sh`（`ENABLE_CEPHFS=1`，`MDS_HOSTS` 定位） |
 | 09 | vip | `setup-ingress-vip.sh --apply`（`ENABLE_MON_VIP=1`） |
-| 10 | verify | `verify.sh`：ceph -s / health / osd tree / pools / orch ps / RGW curl / fs status + 汇总 |
+| 10 | verify | `verify.sh`：ceph -s / health / osd tree / pools / orch ps / RGW curl / fs status + 汇总（`ENABLE_S3_BGP=1` 时另报每台 BGP 节点状态） |
+| — | s3-bgp | **可选，不在默认流程和 `--from` 内**，只能 `./deploy.sh --only s3-bgp`（需 `ENABLE_S3_BGP=1`）：`setup-s3-bgp.sh`，见 [s3-bgp.md](s3-bgp.md) |
 
 ## OSD 安全闸门（不可绕过）
 `disk-safety.sh` 在每台 OSD 主机上采集 `lsblk -J`、`pvs`、`lvs`、`findmnt`、`/proc/swaps`、`wipefs -n`，逐盘给出：
@@ -56,6 +57,18 @@ RGW_INGRESS=1; RGW_VIP="10.250.0.20"; RGW_VIP_CIDR=24; RGW_FRONTEND_PORT=80
 ```
 S3 入口 `http://RGW_VIP:RGW_FRONTEND_PORT`；haproxy/keepalived 镜像来自 node1 本地 registry（离线包已含）。keepalived `first_virtual_router_id=RGW_VRRP_ROUTER_ID`（默认 60，与 mon VIP 的 50 区分）。
 用户：`cephadm shell -- radosgw-admin user create --uid=app --display-name=app`。
+
+## 可选：S3 BGP/ECMP 入口
+在 RGW VIP 正常后，`cluster.conf` 设 `ENABLE_S3_BGP=1`、`S3_BGP_PEER_IP`、`S3_BGP_PEER_ASN`（其余见 example 末尾），然后：
+```bash
+sudo ./validate.sh
+sudo ./deploy.sh --dry-run --only s3-bgp     # 打印每台 frr.conf / sysctl / 动作
+sudo ./deploy.sh --only s3-bgp               # 或 ./setup-s3-bgp.sh [--host node2]
+# 交换机人工：docs/s3-bgp-switch-h3c.md
+sudo ./verify.sh                              # 每台 LOCAL-OK / PENDING-SWITCH / ...
+sudo ./teardown-s3-bgp.sh                     # 回退（先回退交换机）
+```
+`ENABLE_S3_BGP=0`（默认）时默认流程与 oneclick.1 逐行一致；VIP（keepalived/haproxy）在两种模式下都保持不变。
 
 ## 旧用法
 分步脚本 `install-node.sh / bootstrap.sh / add-hosts.sh / add-osds.sh / setup-*.sh` 仍可单独使用（`add-osds.sh --yes-i-really-mean-it` 现在也要求同样的键入确认）。

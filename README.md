@@ -5,14 +5,14 @@ Offline (air-gapped) 3-node Ceph Tentacle **20.2.4** toolkit for clean Ubuntu 24
 cephadm ingress (**haproxy + keepalived** container images in the offline pack). CephFS optional.
 Ceph CSI is a **separate** offline project — not in this repo.
 
-## S3 VIP + BGP/ECMP：后续 agent 交接
+## S3 VIP + BGP/ECMP（可选，默认关闭）
 
-已验证的实验方案、关键文件指引、交换机命令、VM配置、依赖和离线包改造任务见
-**[doc/s3-vip-bgp-20261027/README.md](doc/s3-vip-bgp-20261027/README.md)**。
-实验复用现有RGW ingress VIP，64次独立请求全部成功，两个入口分别27/37分流；
-**当前 `offline/deploy.sh` 和已发布离线包尚未集成该BGP功能**。
-后续 agent 请按交接清单修改参数、FRR/健康服务、离线依赖闭包、资源分发和打包，
-重建并验证带新版本和SHA256的新离线包，不直接重放实验脚本或重部署已有集群。
+默认 S3 入口仍是 cephadm ingress VIP（haproxy + keepalived，`RGW_INGRESS=1`），行为不变。
+可选的 BGP/ECMP 入口已产品化为纯 shell：`ENABLE_S3_BGP=1` 后 **`sudo ./offline/deploy.sh --only s3-bgp`**
+（= `offline/setup-s3-bgp.sh`，回退 `offline/teardown-s3-bgp.sh`），只在 RGW 节点装离线包内的 FRR，
+健康时发布 VIP/32。交换机侧人工执行。见 **[docs/s3-bgp.md](docs/s3-bgp.md)**（VIP 与 BGP 对比、边界、回退）、
+**[docs/s3-bgp-switch-h3c.md](docs/s3-bgp-switch-h3c.md)**（H3C 应用/检查/回退）。
+实验依据与证据：[doc/s3-vip-bgp-20261027/README.md](doc/s3-vip-bgp-20261027/README.md)。
 
 ## Existing offline toolkit
 
@@ -28,7 +28,9 @@ Ceph CSI is a **separate** offline project — not in this repo.
   4. `setup-ingress-vip.sh` — preview default; `--apply` for VIP (placeholders in conf)
   5. `setup-cephfs.sh` (optional)
   6. new: `validate.sh`, `disk-safety.sh` (+ `tests/`), `setup-pools.sh`, `setup-rgw.sh`, `verify.sh`, `deploy.sh`
-- `docs/oneclick.md` — 一键部署（阶段、续跑、OSD 安全闸门、RGW VIP）
+  7. optional: `setup-s3-bgp.sh` / `teardown-s3-bgp.sh` + `s3-bgp/` (FRR only on RGW nodes; `build/packages-s3-bgp.list`)
+- `docs/oneclick.md` — 一键部署（阶段、续跑、OSD 安全闸门、RGW VIP、可选 `--only s3-bgp`）
+- `docs/s3-bgp.md` / `docs/s3-bgp-switch-h3c.md` — 可选 S3 BGP/ECMP 入口（节点侧 / 交换机人工）
 - `docs/runbook-3node.md` — 现场手册（hosts / SSH / OSD / **VIP**）
 - `docs/cephfs-client.md` — CephFS（可选）
 - `docs/validation.md` — 验证记录

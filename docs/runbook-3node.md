@@ -294,6 +294,14 @@ ip -br addr | grep 10.250.0.10 || true
 
 集群至此可用于 **RBD**。CephFS 见 [cephfs-client.md](cephfs-client.md)。
 
+### 9.4 可选：S3 入口 BGP/ECMP
+
+RGW VIP（`RGW_INGRESS=1`）验收通过后才做；默认不做。步骤：`ENABLE_S3_BGP=1` + peer/ASN 参数 →
+`sudo ./validate.sh` → `sudo ./deploy.sh --dry-run --only s3-bgp` → `sudo ./deploy.sh --only s3-bgp` →
+网络管理员按 [s3-bgp-switch-h3c.md](s3-bgp-switch-h3c.md) 配 Leaf → `sudo ./verify.sh`。
+只改 RGW 节点业务网卡的 ARP 两项和自建 dummy；已有他人的 `/etc/frr/frr.conf` 会被拒绝。回退：先交换机，再 `sudo ./teardown-s3-bgp.sh`。
+详见 [s3-bgp.md](s3-bgp.md)。
+
 ---
 
 ## 10. 验收清单
