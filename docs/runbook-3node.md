@@ -110,6 +110,26 @@ sudo ssh -o BatchMode=yes root@node3 hostname -s   # → node3
 
 建议用上述免密把同一份 `cluster.conf` 和离线包从 node1 `scp` 到 node2/3。
 
+### 3.2.1 严格主机密钥（可选）
+
+一键脚本默认 `StrictHostKeyChecking=accept-new`（首次连接写入 known_hosts）。若现场禁止 AcceptNew、只认已钉扎密钥，在 `cluster.conf`（或环境变量）中：
+
+```bash
+SSH_STRICT_HOSTKEY=1
+SSH_KNOWN_HOSTS=/etc/fast-deploy/known_hosts
+```
+
+在 **node1** 预先钉扎（名字与 IP 都扫一遍更稳）：
+
+```bash
+sudo mkdir -p /etc/fast-deploy
+sudo ssh-keyscan -t ed25519,rsa node2 node3 10.250.0.12 10.250.0.13   | sudo tee /etc/fast-deploy/known_hosts >/dev/null
+# 验证：未知主机应失败
+sudo ssh -o BatchMode=yes -o StrictHostKeyChecking=yes   -o UserKnownHostsFile=/etc/fast-deploy/known_hosts root@node2 true
+```
+
+`lib.sh` 的 `ssh_node` 使用 `ssh -n`（关闭 stdin）；需要喂 stdin 的少数路径（如 s3-bgp 打包传输）走 `ssh_node_in`。OSD 盘探测把 `disk-safety.sh` scp 到 `$BUNDLE_DIR/offline/` 再按路径执行，不依赖 `bash -s`。
+
 ### 3.3 Bootstrap 之后：把免密加到 `ceph.pub`（加主机前必做）
 
 **现场易错点（已踩过）：**

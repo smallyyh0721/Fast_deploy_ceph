@@ -72,10 +72,25 @@ mkdir -p "$STATE_DIR"
 PLAN_FILE=${PLAN_FILE:-$STATE_DIR/osd-plan.txt}
 FSID=$(awk '$1=="fsid"{print $3}' /etc/ceph/ceph.conf 2>/dev/null || true)
 
+# Remote path for disk-safety.sh (same place install stage ships offline/*.sh).
+# Always scp our local copy so probe uses this toolkit version; then execute by path
+# (never `bash -s` / never stream the script on ssh stdin — breaks under ssh -n).
+REMOTE_DISK_SAFETY=${REMOTE_DISK_SAFETY:-$BUNDLE_DIR/offline/disk-safety.sh}
+
 probe_host() { # host path... -> snapshot on stdout
   local h=$1; shift
-  if [ "$h" = "$(hostname -s)" ]; then bash "$HERE/disk-safety.sh" probe "$@"
-  else ssh_node "$(node_ip "$h")" "bash -s -- probe $(printf '%q ' "$@")" < "$HERE/disk-safety.sh"; fi
+  local ip remote args
+  if [ "$h" = "$(hostname -s)" ]; then
+    bash "$HERE/disk-safety.sh" probe "$@"
+    return
+  fi
+  ip=$(node_ip "$h")
+  remote=$REMOTE_DISK_SAFETY
+  ssh_node "$ip" "mkdir -p $(printf '%q' "$(dirname "$remote")")"
+  scp -q "${SSH_OPTS[@]}" "$HERE/disk-safety.sh" "root@$ip:$remote"
+  args=$(printf '%q ' "$@")
+  # ssh_node closes stdin (-n); remote runs the copied file by path
+  ssh_node "$ip" "bash $(printf '%q' "$remote") probe $args"
 }
 
 classify_all() {

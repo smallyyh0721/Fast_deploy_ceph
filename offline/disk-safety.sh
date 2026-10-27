@@ -144,8 +144,9 @@ ds_classify() {
   done
 }
 
-# bash -s leaves BASH_SOURCE unset. add-osds.sh probes other nodes that way,
-# and set -u aborts before probe/classify. A real file execution still matches $0.
+# When this file is sourced (e.g. tests), BASH_SOURCE != $0 and we skip the CLI.
+# Remote probes run this file by path (add-osds.sh scp + bash <path>); keep the
+# empty-BASH_SOURCE guard so a future bash -s misuse still reaches probe/classify.
 _ds_src=${BASH_SOURCE[0]:-}
 if [ -z "$_ds_src" ] || [ "$_ds_src" = "$0" ]; then
   cmd=${1:-}; shift || true

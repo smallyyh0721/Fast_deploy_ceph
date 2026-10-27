@@ -38,4 +38,60 @@ if c $'YES-WIPE-2\nOLDX'; then pass=$((pass+1)); echo "ok   confirm correct"; el
 if c $'YES-WIPE-1\nOLDX'; then fail=$((fail+1)); echo "FAIL wrong N accepted"; else pass=$((pass+1)); echo "ok   wrong N rejected"; fi
 if c $'YES-WIPE-2\nXXXX'; then fail=$((fail+1)); echo "FAIL wrong serial accepted"; else pass=$((pass+1)); echo "ok   wrong serial rejected"; fi
 if c $'yes'; then fail=$((fail+1)); echo "FAIL 'yes' accepted"; else pass=$((pass+1)); echo "ok   plain yes rejected"; fi
+# ---- probe / ssh helpers (issue #1): no bash -s stream; ssh -n; strict host-key knobs ----
+AO="$T/../add-osds.sh"; LIB="$T/../lib.sh"
+# remote probe must scp + execute by path, never stream script via bash -s
+if grep -E 'bash[[:space:]]+-s' "$AO" | grep -qvE '^[[:space:]]*#'; then
+  fail=$((fail+1)); echo "FAIL add-osds still uses bash -s for remote probe"
+else pass=$((pass+1)); echo "ok   probe does not use bash -s"; fi
+grep -q 'scp .*disk-safety.sh' "$AO" && grep -q 'REMOTE_DISK_SAFETY\|offline/disk-safety.sh' "$AO" \
+  && { pass=$((pass+1)); echo "ok   probe scp + remote path"; } \
+  || { fail=$((fail+1)); echo "FAIL probe missing scp/remote path"; }
+# ssh_node closes stdin; ssh_node_in exists for rare streaming callers
+grep -qE 'ssh_node\(\).*ssh -n|ssh -n "\$\{SSH_OPTS' "$LIB" \
+  && { pass=$((pass+1)); echo "ok   ssh_node uses ssh -n"; } \
+  || { fail=$((fail+1)); echo "FAIL ssh_node missing -n"; }
+grep -q 'ssh_node_in()' "$LIB" \
+  && { pass=$((pass+1)); echo "ok   ssh_node_in present"; } \
+  || { fail=$((fail+1)); echo "FAIL ssh_node_in missing"; }
+# ceph_ closes stdin so apply-plan cannot be drained
+grep -q 'cephadm shell -- ceph "$@" </dev/null' "$LIB" \
+  && { pass=$((pass+1)); echo "ok   ceph_ closes stdin"; } \
+  || { fail=$((fail+1)); echo "FAIL ceph_ stdin not closed"; }
+# ssh_build_opts: default accept-new; strict + known_hosts when set
+W=$(mktemp -d); trap 'rm -rf "$W"' RETURN
+cat > "$W/c.conf" <<'C'
+NODE_NAMES=(node1); NODE_IPS=(127.0.0.1); PUBLIC_NETWORK=127.0.0.0/8
+CEPH_VERSION=20.2.4; REGISTRY_PORT=5000; BUNDLE_DIR=/opt/ceph-offline
+OSD_DEVICES=("node1:/dev/disk/by-id/x"); POOL_SIZE=1; POOL_MIN_SIZE=1
+C
+opts_of() { # print SSH_OPTS joined
+  env -i PATH="$PATH" HOME="$HOME" CONF="$W/c.conf" bash -c '
+    set -euo pipefail
+    . "'"$LIB"'"
+    '"$1"'
+    load_conf
+    printf "%s\n" "${SSH_OPTS[*]}"
+  '
+}
+o=$(opts_of ''); [[ $o == *StrictHostKeyChecking=accept-new* ]] \
+  && { pass=$((pass+1)); echo "ok   default accept-new"; } \
+  || { fail=$((fail+1)); echo "FAIL default opts: $o"; }
+o=$(opts_of 'SSH_STRICT_HOSTKEY=1; SSH_KNOWN_HOSTS=/tmp/kh.test')
+[[ $o == *StrictHostKeyChecking=yes* && $o == *UserKnownHostsFile=/tmp/kh.test* && $o != *accept-new* ]] \
+  && { pass=$((pass+1)); echo "ok   strict + UserKnownHostsFile"; } \
+  || { fail=$((fail+1)); echo "FAIL strict opts: $o"; }
+# conf file knobs
+cat >> "$W/c.conf" <<'C'
+SSH_STRICT_HOSTKEY=1
+SSH_KNOWN_HOSTS=/etc/fast-deploy/known_hosts
+C
+o=$(opts_of '')
+[[ $o == *StrictHostKeyChecking=yes* && $o == *UserKnownHostsFile=/etc/fast-deploy/known_hosts* ]] \
+  && { pass=$((pass+1)); echo "ok   conf SSH_STRICT_HOSTKEY/SSH_KNOWN_HOSTS"; } \
+  || { fail=$((fail+1)); echo "FAIL conf opts: $o"; }
+# deploy install stage uses ssh_node (closed stdin), not bare ssh without -n
+if grep -E 'run ssh "\$\{SSH_OPTS' "$T/../deploy.sh" | grep -qvE '^[[:space:]]*#'; then
+  fail=$((fail+1)); echo "FAIL deploy.sh still uses ssh without ssh_node/-n"
+else pass=$((pass+1)); echo "ok   deploy install uses ssh_node"; fi
 echo "passed=$pass failed=$fail"; [ "$fail" -eq 0 ]

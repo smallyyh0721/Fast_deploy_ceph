@@ -112,15 +112,15 @@ s3b_frr_conf_status() {
 }
 
 # ship this toolkit + node.conf to <ip> and run "<script> --local <node.conf> [args]" there.
-# stdin of the remote command is closed; tar is the only thing using the ssh stdin.
+# tar / cat need ssh stdin (ssh_node_in); the --local run uses ssh_node (-n, stdin closed).
 # shellcheck disable=SC2029  # remote paths are expanded locally on purpose
 s3b_ship_and_run() {
   local ip=$1 nodeconf=$2 script=$3; shift 3
   local src; src=$(cd "$S3B_SRC" && pwd)
   local files=(setup-s3-bgp.sh teardown-s3-bgp.sh s3-bgp)
   [ -f "$src/packages-s3-bgp.list" ] && files+=(packages-s3-bgp.list)
-  tar -C "$src" -cf - "${files[@]}" | ssh "${SSH_OPTS[@]}" "root@$ip" \
+  tar -C "$src" -cf - "${files[@]}" | ssh_node_in "$ip" \
     "rm -rf '$S3B_REMOTE_PKG' && mkdir -p '$S3B_REMOTE_PKG' && tar -C '$S3B_REMOTE_PKG' -xf -"
-  ssh "${SSH_OPTS[@]}" "root@$ip" "cat > '$S3B_REMOTE_PKG/node.conf'" < "$nodeconf"
-  ssh "${SSH_OPTS[@]}" "root@$ip" "bash '$S3B_REMOTE_PKG/$script' --local '$S3B_REMOTE_PKG/node.conf' $*" </dev/null
+  ssh_node_in "$ip" "cat > '$S3B_REMOTE_PKG/node.conf'" < "$nodeconf"
+  ssh_node "$ip" "bash '$S3B_REMOTE_PKG/$script' --local '$S3B_REMOTE_PKG/node.conf' $*"
 }
