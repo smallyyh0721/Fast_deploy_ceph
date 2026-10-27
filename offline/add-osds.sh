@@ -50,6 +50,45 @@ confirm_plan() {
   return 0
 }
 
+# Remote probe: copy OUR disk-safety.sh to the node and execute it by path (never
+# `bash -s` / script on ssh stdin, which breaks under ssh -n). Path defaults to
+# $BUNDLE_DIR/offline/disk-safety.sh (override REMOTE_DISK_SAFETY).
+# The caller runs us as `probe_host ... || die`, which disables set -e in here, so every
+# step checks its own status explicitly. Copy is scp to <path>.tmp.<pid> (<pid> = this
+# add-osds.sh process on node1), then chmod+mv over the final path; if the scp or the
+# chmod/mv fails we best-effort remove the .tmp on the node and return 1 WITHOUT running
+# anything, so neither a partial copy nor a stale old copy is executed.
+probe_host() { # host path... -> snapshot on stdout; non-zero on any failure
+  local h=$1; shift
+  local ip remote tmp q_dir q_tmp q_remote args
+  if [ "$h" = "$(hostname -s)" ]; then
+    bash "$HERE/disk-safety.sh" probe "$@" || return 1
+    return 0
+  fi
+  ip=$(node_ip "$h") || return 1
+  [ -n "$ip" ] || { echo "probe_host: no IP for $h" >&2; return 1; }
+  remote=${REMOTE_DISK_SAFETY:-$BUNDLE_DIR/offline/disk-safety.sh}
+  # scp's remote path may or may not go through a remote shell (SFTP vs legacy mode), so
+  # restrict it to a plain absolute path instead of relying on quoting there.
+  [[ $remote =~ ^/[A-Za-z0-9._/+-]+$ ]] || { echo "probe_host: unsafe REMOTE_DISK_SAFETY path: $remote" >&2; return 1; }
+  tmp="$remote.tmp.$$"
+  q_dir=$(printf '%q' "$(dirname "$remote")"); q_tmp=$(printf '%q' "$tmp"); q_remote=$(printf '%q' "$remote")
+  args=$(printf '%q ' "$@")
+  ssh_node "$ip" "mkdir -p $q_dir" \
+    || { echo "probe_host: mkdir $remote dir failed on $h" >&2; return 1; }
+  if ! scp -q "${SSH_OPTS[@]}" "$HERE/disk-safety.sh" "root@$ip:$tmp"; then
+    echo "probe_host: scp disk-safety.sh to $h failed" >&2
+    ssh_node "$ip" "rm -f $q_tmp" || true
+    return 1
+  fi
+  if ! ssh_node "$ip" "chmod 0755 $q_tmp && mv -f $q_tmp $q_remote"; then
+    echo "probe_host: install $remote on $h failed (chmod/mv)" >&2
+    ssh_node "$ip" "rm -f $q_tmp" || true
+    return 1
+  fi
+  ssh_node "$ip" "bash $q_remote probe $args" || return 1
+}
+
 [ "${1:-}" = --source-only ] && return 0 2>/dev/null
 
 MODE=preview; ONLY=""; SKIP_REFUSED=0; PLAN_FILE=""
@@ -71,12 +110,6 @@ need_root; load_conf
 mkdir -p "$STATE_DIR"
 PLAN_FILE=${PLAN_FILE:-$STATE_DIR/osd-plan.txt}
 FSID=$(awk '$1=="fsid"{print $3}' /etc/ceph/ceph.conf 2>/dev/null || true)
-
-probe_host() { # host path... -> snapshot on stdout
-  local h=$1; shift
-  if [ "$h" = "$(hostname -s)" ]; then bash "$HERE/disk-safety.sh" probe "$@"
-  else ssh_node "$(node_ip "$h")" "bash -s -- probe $(printf '%q ' "$@")" < "$HERE/disk-safety.sh"; fi
-}
 
 classify_all() {
   local h e d hosts=() paths snap

@@ -78,6 +78,11 @@ load_conf() {
   S3_BGP_PROBE_EXPECT=${S3_BGP_PROBE_EXPECT:-ListAllMyBucketsResult}; S3_BGP_PROBE_CODES=${S3_BGP_PROBE_CODES:-200 403}
   S3_BGP_RISE=${S3_BGP_RISE:-3}; S3_BGP_FALL=${S3_BGP_FALL:-2}; S3_BGP_INTERVAL=${S3_BGP_INTERVAL:-2}
   S3_BGP_WATCHDOG_SEC=${S3_BGP_WATCHDOG_SEC:-15}
+  # SSH knobs may be set in cluster.conf; rebuild after sourcing
+  SSH_CONNECT_TIMEOUT=${SSH_CONNECT_TIMEOUT:-8}
+  SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY:-0}
+  SSH_KNOWN_HOSTS=${SSH_KNOWN_HOSTS:-}
+  ssh_build_opts || die "invalid SSH settings (see above)"
 }
 
 # DRY_RUN=1: mutating commands are printed, not executed.
@@ -85,14 +90,34 @@ DRY_RUN=${DRY_RUN:-0}
 run() {
   if [ "$DRY_RUN" = 1 ]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi
 }
-# root ssh to a cluster node (key auth only, never prompts)
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
-ssh_node() { local h=$1; shift; ssh "${SSH_OPTS[@]}" "root@$h" "$@"; }
+# root ssh to a cluster node (key auth only, never prompts).
+# Default StrictHostKeyChecking=accept-new (first connect pins the key). For pinned-only:
+#   SSH_STRICT_HOSTKEY=1
+#   SSH_KNOWN_HOSTS=/path/to/known_hosts   # optional UserKnownHostsFile (ssh-keyscan to populate)
+# Precedence: assignment in cluster.conf > exported env > default (load_conf rebuilds SSH_OPTS).
+# (No top-level defaults here: an unset var stays unset until load_conf, so a conf line
+# SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY-1} can supply a default that env still overrides.)
+ssh_build_opts() {
+  local strict=${SSH_STRICT_HOSTKEY:-0} kh=${SSH_KNOWN_HOSTS:-} ct=${SSH_CONNECT_TIMEOUT:-8}
+  SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout="$ct")
+  case $strict in
+    1|yes|YES|true|TRUE) SSH_OPTS+=(-o StrictHostKeyChecking=yes);;
+    0|no|NO|false|FALSE) SSH_OPTS+=(-o StrictHostKeyChecking=accept-new);;
+    *) printf '\033[1;31m[FAIL]\033[0m %s\n' "SSH_STRICT_HOSTKEY='$strict' is invalid: use 1/yes/true (StrictHostKeyChecking=yes) or 0/no/false (accept-new, default)" >&2
+       return 1;;
+  esac
+  if [ -n "$kh" ]; then SSH_OPTS+=(-o "UserKnownHostsFile=$kh"); fi
+}
+ssh_build_opts || exit 1
+# Non-interactive remote: stdin closed (-n). Prefer this for all command invocations.
+ssh_node() { local h=$1; shift; ssh -n "${SSH_OPTS[@]}" "root@$h" "$@"; }
+# Rare: remote command must read stdin (tar pipe, cat >file). Caller feeds stdin.
+ssh_node_in() { local h=$1; shift; ssh "${SSH_OPTS[@]}" "root@$h" "$@"; }
 # IP of a node name from NODE_NAMES/NODE_IPS
 node_ip() {
   local i; for i in "${!NODE_NAMES[@]}"; do [ "${NODE_NAMES[$i]}" = "$1" ] && { echo "${NODE_IPS[$i]}"; return 0; }; done; return 1
 }
-# run a command on node (local if it is this host)
+# run a command on node (local if it is this host); stdin closed on remote
 on_node() {
   local h=$1; shift
   if [ "$h" = "$(hostname -s)" ]; then bash -c "$*"; else ssh_node "$(node_ip "$h" || echo "$h")" "$*"; fi
@@ -109,4 +134,6 @@ self_index() {
   echo -1
 }
 
-ceph_() { cephadm shell -- ceph "$@"; }
+# Always close stdin: cephadm shell would otherwise drain a parent pipeline
+# (e.g. `done < "$PLAN_FILE"` in add-osds.sh --apply-plan).
+ceph_() { cephadm shell -- ceph "$@" </dev/null; }

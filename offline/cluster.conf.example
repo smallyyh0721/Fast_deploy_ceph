@@ -4,6 +4,18 @@
 CEPH_VERSION="20.2.4"
 BUNDLE_DIR="/opt/ceph-offline"          # where the bundle is extracted on every node
 
+# SSH from node1 to peers (BatchMode). Optional; leave commented for the default
+# StrictHostKeyChecking=accept-new and OpenSSH's default known_hosts.
+# Pinned-host-only (no AcceptNew): pin keys first, then uncomment:
+#   mkdir -p /etc/fast-deploy
+#   ssh-keyscan -t ed25519,rsa node2 node3 10.250.0.12 10.250.0.13 > /etc/fast-deploy/known_hosts
+# SSH_STRICT_HOSTKEY=1                     # 1/yes/true = StrictHostKeyChecking=yes; 0/no/false = accept-new; other values = error
+# SSH_KNOWN_HOSTS=/etc/fast-deploy/known_hosts   # UserKnownHostsFile
+# SSH_CONNECT_TIMEOUT=8
+# Precedence: an assignment here > exported environment variable > built-in default.
+# (Use SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY-1} here to let the environment override.)
+# Note: sudo drops env by default -> `sudo SSH_STRICT_HOSTKEY=1 ./deploy.sh`.
+
 # Nodes: index 0 is the admin/bootstrap node (runs registry, chrony server, bootstrap).
 # Names MUST equal `hostname -s` on each node.
 NODE_NAMES=(node1 node2 node3)

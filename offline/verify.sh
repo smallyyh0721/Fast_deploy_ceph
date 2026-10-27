@@ -16,7 +16,7 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 need_root
-for c in "${CHECKS[@]}"; do log "$c"; read -ra w <<<"$c"; cephadm shell -- "${w[@]}" || true; done
+for c in "${CHECKS[@]}"; do log "$c"; read -ra w <<<"$c"; cephadm shell -- "${w[@]}" </dev/null || true; done
 FAIL=0
 H=$(ceph_ health --format json | jq -r .status)
 UP=$(ceph_ osd stat --format json | jq -r .num_up_osds)

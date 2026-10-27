@@ -65,14 +65,14 @@ stage_install() {
       run bash "$HERE/install-node.sh" --verify-payload
     else
       # ship this toolkit + cluster.conf so every node runs the same script version
-      run ssh "${SSH_OPTS[@]}" "root@$ip" "mkdir -p '$REMOTE_DIR'"
+      run ssh_node "$ip" "mkdir -p '$REMOTE_DIR'"
       local files=() f
       for f in "$HERE"/*.sh; do [[ $f == *s3-bgp* ]] || files+=("$f"); done   # s3-bgp ships itself
       files+=("$CONF")
       for f in packages.list images.list; do [ -f "$HERE/$f" ] && files+=("$HERE/$f"); done
       run scp -q "${SSH_OPTS[@]}" "${files[@]}" "root@$ip:$REMOTE_DIR/"
-      [ "$(basename "$CONF")" = cluster.conf ] || run ssh "${SSH_OPTS[@]}" "root@$ip" "cp '$REMOTE_DIR/$(basename "$CONF")' '$REMOTE_DIR/cluster.conf'"
-      run ssh "${SSH_OPTS[@]}" "root@$ip" "cd '$REMOTE_DIR' && bash ./install-node.sh --verify-payload"
+      [ "$(basename "$CONF")" = cluster.conf ] || run ssh_node "$ip" "cp '$REMOTE_DIR/$(basename "$CONF")' '$REMOTE_DIR/cluster.conf'"
+      run ssh_node "$ip" "cd '$REMOTE_DIR' && bash ./install-node.sh --verify-payload"
     fi
   done
 }
@@ -80,7 +80,7 @@ stage_bootstrap() { run bash "$HERE/bootstrap.sh"; }
 stage_hosts() { run bash "$HERE/add-hosts.sh" --apply; }
 stage_osd_preview() {
   if [ "$DRY_RUN" = 1 ]; then
-    echo "  [dry-run] ssh each OSD host: disk-safety.sh probe (lsblk/pvs/lvs/findmnt/wipefs) -> table CREATE/NEEDS-ZAP/SKIP/REFUSE"
+    echo "  [dry-run] ssh -n each OSD host: scp disk-safety.sh -> $BUNDLE_DIR/offline/disk-safety.sh.tmp.<node1 pid>, chmod+mv to final path (any failure: rm .tmp, abort); bash <path> probe (lsblk/pvs/lvs/findmnt/wipefs) -> table CREATE/NEEDS-ZAP/SKIP/REFUSE"
     echo "  [dry-run] any REFUSE -> abort; then operator types YES-WIPE-<N> + serial last-4 per NEEDS-ZAP disk (cannot be skipped, also not by --yes)"
     local e; for e in "${OSD_DEVICES[@]}"; do echo "    candidate ${e%%:*} $(cut -d: -f2 <<<"$e")"; done
     echo "  [dry-run] write $STATE_DIR/osd-plan.txt"
