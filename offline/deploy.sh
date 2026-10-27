@@ -8,11 +8,13 @@
 #   --yes   skip the "start deployment?" prompt. It does NOT skip the OSD typed confirmation.
 #   --list  show stages and their markers
 # Stages: validate install bootstrap hosts osd-preview osd pools rgw cephfs vip verify
+# Optional (never in the default run / --from): --only s3-bgp  (ENABLE_S3_BGP=1, docs/s3-bgp.md)
 # Markers: $STATE_DIR/<stage>.done (contain sha256 of cluster.conf).
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$HERE/lib.sh"
 STAGES=(validate install bootstrap hosts osd-preview osd pools rgw cephfs vip verify)
+OPT_STAGES=(s3-bgp)   # only via --only / --reset-stage
 FROM=""; ONLY=""; RESET=""; YES=0; LIST=0
 while [ $# -gt 0 ]; do
   case $1 in
@@ -22,14 +24,16 @@ while [ $# -gt 0 ]; do
     --reset-stage) RESET=$2; shift;;
     --yes|-y) YES=1;;
     --list) LIST=1;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0;;
     *) die "unknown arg $1";;
   esac; shift
 done
 export DRY_RUN
 DRYFLAG=(); [ "$DRY_RUN" = 1 ] && DRYFLAG=(--dry-run)
 valid_stage() { local s; for s in "${STAGES[@]}"; do [ "$s" = "$1" ] && return 0; done; die "unknown stage '$1' (${STAGES[*]})"; }
-for s in $FROM $ONLY $RESET; do valid_stage "$s"; done
+is_opt_stage() { local s; for s in "${OPT_STAGES[@]}"; do [ "$s" = "$1" ] && return 0; done; return 1; }
+for s in $FROM; do valid_stage "$s"; done
+for s in $ONLY $RESET; do is_opt_stage "$s" || valid_stage "$s"; done
 [ -z "$FROM" ] || [ -z "$ONLY" ] || die "--from and --only are exclusive"
 [ "$DRY_RUN" = 1 ] || [ "$LIST" = 1 ] || need_root
 load_conf
@@ -43,6 +47,9 @@ if [ -n "$RESET" ]; then rm -f "$(marker "$RESET")"; [ "$RESET" = osd-preview ] 
 if [ "$LIST" = 1 ]; then
   for s in "${STAGES[@]}"; do
     if is_done "$s"; then printf '  %-12s done %s\n' "$s" "$(grep -h ^done= "$(marker "$s")" | cut -d= -f2)"; else printf '  %-12s -\n' "$s"; fi
+  done
+  for s in "${OPT_STAGES[@]}"; do
+    if is_done "$s"; then printf '  %-12s done %s (optional, --only)\n' "$s" "$(grep -h ^done= "$(marker "$s")" | cut -d= -f2)"; else printf '  %-12s - (optional, --only)\n' "$s"; fi
   done; exit 0
 fi
 
@@ -59,7 +66,9 @@ stage_install() {
     else
       # ship this toolkit + cluster.conf so every node runs the same script version
       run ssh "${SSH_OPTS[@]}" "root@$ip" "mkdir -p '$REMOTE_DIR'"
-      local files=("$HERE"/*.sh "$CONF") f
+      local files=() f
+      for f in "$HERE"/*.sh; do [[ $f == *s3-bgp* ]] || files+=("$f"); done   # s3-bgp ships itself
+      files+=("$CONF")
       for f in packages.list images.list; do [ -f "$HERE/$f" ] && files+=("$HERE/$f"); done
       run scp -q "${SSH_OPTS[@]}" "${files[@]}" "root@$ip:$REMOTE_DIR/"
       [ "$(basename "$CONF")" = cluster.conf ] || run ssh "${SSH_OPTS[@]}" "root@$ip" "cp '$REMOTE_DIR/$(basename "$CONF")' '$REMOTE_DIR/cluster.conf'"
@@ -94,10 +103,15 @@ stage_rgw() { [ "$ENABLE_RGW" = 1 ] || { log "ENABLE_RGW=0, skip"; return 0; }; 
 stage_cephfs() { [ "$ENABLE_CEPHFS" = 1 ] || { log "ENABLE_CEPHFS=0, skip"; return 0; }; run bash "$HERE/setup-cephfs.sh"; }
 stage_vip() { [ "$ENABLE_MON_VIP" = 1 ] || { log "ENABLE_MON_VIP=0, skip"; return 0; }; run bash "$HERE/setup-ingress-vip.sh" --apply; }
 stage_verify() { bash "$HERE/verify.sh" "${DRYFLAG[@]}"; }
+stage_s3_bgp() {
+  [ "$ENABLE_S3_BGP" = 1 ] || die "ENABLE_S3_BGP=0 in $CONF (optional BGP entry, docs/s3-bgp.md)"
+  bash "$HERE/setup-s3-bgp.sh" "${DRYFLAG[@]}"
+}
 
 # ---- select & run -------------------------------------------------------------------
 SEL=(); started=0
-for s in "${STAGES[@]}"; do
+for s in "${STAGES[@]}" "${OPT_STAGES[@]}"; do
+  if is_opt_stage "$s"; then [ "$s" = "$ONLY" ] && SEL+=("$s"); continue; fi
   if [ -n "$ONLY" ]; then [ "$s" = "$ONLY" ] && SEL+=("$s"); continue; fi
   if [ -n "$FROM" ]; then [ "$s" = "$FROM" ] && started=1; [ "$started" = 1 ] && SEL+=("$s"); continue; fi
   SEL+=("$s")

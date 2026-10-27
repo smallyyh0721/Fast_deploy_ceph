@@ -114,3 +114,34 @@ ENABLE_MON_VIP=0
 # CephFS during deploy.sh: 1 = run setup-cephfs.sh (FS_* fields above)
 ENABLE_CEPHFS=0
 MDS_HOSTS=()                              # e.g. (node1 node2); () = any MDS_COUNT hosts
+
+# =====================================================================================
+# Optional S3 BGP/ECMP entry (docs/s3-bgp.md). OFF by default and NOT part of the default
+# deploy.sh run: enable here, then `./deploy.sh --only s3-bgp` (or ./setup-s3-bgp.sh).
+# Needs RGW_INGRESS=1 (existing cephadm haproxy+keepalived VIP is kept as-is). Each
+# S3_BGP_HOSTS node gets FRR (from the bundle), dummy $S3_BGP_DUMMY holding VIP/32, ARP
+# sysctls on $S3_BGP_IFACE only, and a health service that announces VIP/32 to the peer
+# only while local HAProxy + RGW are healthy. Switch side is manual: docs/s3-bgp-switch-h3c.md
+# =====================================================================================
+ENABLE_S3_BGP=0
+S3_BGP_HOSTS=()                           # () = RGW_HOSTS (must run ingress haproxy)
+S3_BGP_VIP=""                             # "" = RGW_VIP (bare IP, announced as /32)
+S3_BGP_LOCAL_ASN=65050                    # node side AS (same on all hosts)
+S3_BGP_PEER_IP=""                         # switch/leaf IP on the business subnet, e.g. 10.11.4.1
+S3_BGP_PEER_ASN=65000
+S3_BGP_ROUTER_IDS=()                      # ("node2=10.11.4.42" ...); () = node IP from NODE_IPS
+S3_BGP_IFACE=""                           # business iface; "" = iface holding the node IP
+S3_BGP_DUMMY="s3vip0"                     # our dummy iface (<=15 chars, must not exist)
+S3_BGP_KEEPALIVE=3; S3_BGP_HOLD=9         # BGP timers (must match switch side)
+S3_BGP_PREFIX_LIST="S3VIP"                # FRR prefix-lists <name>-OUT / <name>-IN
+# HAProxy discovery: "" = newest match of the glob (cephadm: /var/lib/ceph/<fsid>/haproxy.rgw.<svc>.<host>.<rand>/haproxy/haproxy.cfg)
+S3_BGP_HAPROXY_CFG=""
+#S3_BGP_HAPROXY_GLOB="/var/lib/ceph/*/haproxy.rgw.main.*/haproxy/haproxy.cfg"
+S3_BGP_STATS_URL=""                       # "" = http://<node IP>:RGW_MONITOR_PORT/stats;csv (auth read from haproxy.cfg)
+S3_BGP_FRONTEND_NAME="frontend"; S3_BGP_BACKEND_NAME="backend"; S3_BGP_BACKEND_SERVER_PREFIX="rgw."
+# Local probe: anon-xml (GET -> 200 + S3_BGP_PROBE_EXPECT) | http-status (code in S3_BGP_PROBE_CODES)
+#              | tcp | none.  S3_BGP_PROBE_URL "" = http://<node IP>:RGW_PORT/
+S3_BGP_PROBE_MODE="anon-xml"; S3_BGP_PROBE_URL=""
+S3_BGP_PROBE_EXPECT="ListAllMyBucketsResult"; S3_BGP_PROBE_CODES="200 403"
+S3_BGP_RISE=3; S3_BGP_FALL=2; S3_BGP_INTERVAL=2   # advertise after 3 good, withdraw after 2 bad, poll 2s
+S3_BGP_WATCHDOG_SEC=15

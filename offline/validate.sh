@@ -79,6 +79,12 @@ fi
 if [ "$ENABLE_MON_VIP" = 1 ]; then
   is_ip "$VIP_ADDR" && in_net "$VIP_ADDR" "$VIP_INTERFACE_NETWORK" || bad "VIP_ADDR '$VIP_ADDR' invalid / not in $VIP_INTERFACE_NETWORK"
 fi
+if [ "$ENABLE_S3_BGP" = 1 ]; then
+  # shellcheck source=s3-bgp/common.sh
+  . "$HERE/s3-bgp/common.sh"
+  if s3b_check_conf; then ok "S3 BGP: ${S3_BGP_VIP}/32 AS$S3_BGP_LOCAL_ASN -> $S3_BGP_PEER_IP AS$S3_BGP_PEER_ASN on ${S3_BGP_HOSTS[*]} (deploy.sh --only s3-bgp)"
+  else bad "S3 BGP config invalid (see above)"; fi
+fi
 if [ "$NOSD" -gt 0 ]; then
   PER=$(( PGREP / NOSD ))
   if [ "$PER" -gt $(( TARGET_PG_PER_OSD * 5 / 2 )) ]; then bad "~$PER PG replicas/OSD (> 2.5x TARGET_PG_PER_OSD=$TARGET_PG_PER_OSD); lower pg_num"
@@ -113,6 +119,28 @@ if [ "$OFFLINE" = 0 ]; then
       [ "$ALREADY" = 1 ] && warn "VIP $v answers (ok if already deployed)" || bad "VIP $v already in use"
     else ok "VIP $v free"; fi
   done
+  if [ "$ENABLE_S3_BGP" = 1 ]; then
+    # read-only: frr bundle deb, existing FRR config ownership, dummy name collision
+    S3CHK="ls $BUNDLE_DIR/debs/frr_*.deb >/dev/null 2>&1 || echo NOFRRDEB
+f=/etc/frr/frr.conf
+if [ -e \$f ] && ! grep -q '^! $S3B_MARKER' \$f; then
+  m=\$(dpkg-query -W -f='\${Conffiles}\n' frr 2>/dev/null | awk '\$1==\"/etc/frr/frr.conf\" {print \$2}')
+  [ -n \"\$m\" ] && [ \"\$(md5sum < \$f | cut -d' ' -f1)\" = \"\$m\" ] || echo FOREIGNFRR
+fi
+if ip link show dev $S3_BGP_DUMMY >/dev/null 2>&1; then ip -d -o link show dev $S3_BGP_DUMMY | grep -q 'alias fast-deploy-s3-bgp' || echo DUMMYFOREIGN; fi
+timeout 3 bash -c ': </dev/tcp/$S3_BGP_PEER_IP/179' 2>/dev/null || echo TCP179FAIL"
+    for h in "${S3_BGP_HOSTS[@]}"; do
+      out=$(on_node "$h" "$S3CHK" 2>/dev/null) || out="SSHFAIL"
+      case $out in
+        *SSHFAIL*) bad "$h: s3-bgp checks: ssh failed";;
+        *NOFRRDEB*) bad "$h: frr .deb missing in $BUNDLE_DIR/debs (need bundle >= oneclick.2)";;
+        *FOREIGNFRR*) bad "$h: /etc/frr/frr.conf exists and was not created by fast-deploy (setup-s3-bgp.sh will refuse)";;
+        *DUMMYFOREIGN*) bad "$h: interface $S3_BGP_DUMMY exists and is not ours";;
+        *) ok "$h: s3-bgp preflight (frr deb, /etc/frr/frr.conf, $S3_BGP_DUMMY)";;
+      esac
+      if [[ $out == *TCP179FAIL* ]]; then warn "$h: TCP $S3_BGP_PEER_IP:179 not reachable (ok until the switch side is configured)"; fi
+    done
+  fi
 else
   warn "--offline: skipped ssh/hostname/hosts/bundle/disk/VIP checks"
 fi
