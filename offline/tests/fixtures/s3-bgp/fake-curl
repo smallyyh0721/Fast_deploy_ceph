@@ -1,0 +1,18 @@
+#!/bin/bash
+# test double for curl: logs argv, captures -K stdin, serves fixtures
+echo "$*" >> "$FAKE_LOG"
+out=""; url=""; w=""
+while [ $# -gt 0 ]; do
+  case $1 in
+    -o) out=$2; shift;;
+    -w) w=$2; shift;;
+    -K) cat > "$FAKE_LOG.stdin";;
+    -m|--max-filesize|--noproxy) shift;;
+    http*) url=$1;;
+  esac; shift
+done
+case $url in
+  *stats*) [ -n "${FAKE_STATS:-}" ] || exit 7; cp "$FAKE_STATS" "$out";;
+  *) if [ -z "$out" ]; then printf '%s' "${FAKE_BODY:-}"; fi
+     if [ -n "$w" ]; then printf "${w//%\{http_code\}/${FAKE_CODE:-200}}"; fi;;
+esac

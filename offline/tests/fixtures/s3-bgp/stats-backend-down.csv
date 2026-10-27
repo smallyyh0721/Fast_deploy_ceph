@@ -1,0 +1,5 @@
+# pxname,svname,qcur,qmax,scur,smax,slim,stot,bin,bout,dreq,dresp,ereq,econ,eresp,wretr,wredis,status,weight,act,bck,chkfail,chkdown,lastchg,downtime,qlimit,pid,iid,sid,throttle,lbtot,tracked,type,rate,rate_lim,rate_max,check_status,
+frontend,FRONTEND,0,0,0,1,,10,100,200,0,0,0,,,,,OPEN,1,1,0,,,5,,,1,2,0,,,,0,0,0,1,,
+backend,rgw.main.node2.abcdef,0,0,0,1,,10,100,200,0,0,0,,,,,DOWN,1,1,0,,,5,,,1,2,0,,,,0,0,0,1,L4CON,
+backend,rgw.main.node3.ghijkl,0,0,0,1,,10,100,200,0,0,0,,,,,MAINT,1,1,0,,,5,,,1,2,0,,,,0,0,0,1,,
+backend,BACKEND,0,0,0,1,,10,100,200,0,0,0,,,,,DOWN,1,1,0,,,5,,,1,2,0,,,,0,0,0,1,,
