@@ -128,7 +128,7 @@ sudo ssh-keyscan -t ed25519,rsa node2 node3 10.250.0.12 10.250.0.13   | sudo tee
 sudo ssh -o BatchMode=yes -o StrictHostKeyChecking=yes   -o UserKnownHostsFile=/etc/fast-deploy/known_hosts root@node2 true
 ```
 
-`lib.sh` 的 `ssh_node` 使用 `ssh -n`（关闭 stdin）；需要喂 stdin 的少数路径（如 s3-bgp 打包传输）走 `ssh_node_in`。OSD 盘探测把 `disk-safety.sh` scp 到 `$BUNDLE_DIR/offline/disk-safety.sh.tmp.<pid>`，再 `mv` 成正式文件（原子替换）后按路径执行，不依赖 `bash -s`。
+`lib.sh` 的 `ssh_node` 使用 `ssh -n`（关闭 stdin）；需要喂 stdin 的少数路径（如 s3-bgp 打包传输）走 `ssh_node_in`。OSD 盘探测把 `disk-safety.sh` scp 到 `$BUNDLE_DIR/offline/disk-safety.sh.tmp.<pid>`（`<pid>` 是 node1 上 `add-osds.sh` 进程的本地 PID），再 `chmod`+`mv` 成正式文件（原子替换）后按路径执行，不依赖 `bash -s`。scp 或 chmod/mv 任一步失败：尽力删除远端 `.tmp`、不执行任何脚本、探测返回失败并中止。`SSH_STRICT_HOSTKEY` 只接受 `1/yes/true` 或 `0/no/false`，其它值直接报错退出。
 
 ### 3.3 Bootstrap 之后：把免密加到 `ceph.pub`（加主机前必做）
 

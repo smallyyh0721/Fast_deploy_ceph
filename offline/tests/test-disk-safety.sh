@@ -166,4 +166,47 @@ if [[ $tmpl == /opt/b/offline/disk-safety.sh.tmp.* ]]; then r=0; else r=1; fi; c
 if grep -q "mv -f $tmpl /opt/b/offline/disk-safety.sh" <<<"$o"; then r=0; else r=1; fi; chk "ssh mv tmp -> final path" $r
 if [ "$(grep -cE '^SSH mkdir|^SCP|mv -f|^SSH bash ' <<<"$o")" = 4 ] && [[ $(grep -nE '' <<<"$o" | awk -F: '/SSH mkdir/{a=$1}/SCP/{b=$1}/mv -f/{c=$1}/SSH bash/{d=$1}END{print (a<b&&b<c&&c<d)?"y":"n"}') == y ]]; then r=0; else r=1; fi; chk "probe order mkdir->scp tmp->mv->bash path" $r
 o=$(grep -nE 'scp .*root@\$ip:\$remote"' "$OFF/add-osds.sh" || true); if [ -z "$o" ]; then r=0; else r=1; fi; chk "add-osds never scps directly onto final path" $r
+# ---- probe_host failure paths (caller is `probe_host ... || die`: set -e is OFF inside) ----
+probe_sim() { # probe_sim FAILSTEP [REMOTE_DISK_SAFETY] -> log lines, last line "RC=<n>"
+  env -i PATH="$PATH" HOME="$HOME" FAILSTEP="$1" RDS="${2:-}" bash -c '
+    set -euo pipefail
+    . "'"$OFF"'/add-osds.sh" --source-only
+    BUNDLE_DIR=/opt/b; [ -z "$RDS" ] || REMOTE_DISK_SAFETY=$RDS
+    hostname() { echo adminnode; }
+    node_ip() { echo 10.9.9.2; }
+    ssh_node() { shift; echo "SSH $*"
+      case "$FAILSTEP:$*" in
+        mkdir:mkdir*|mv:chmod*|probe:bash*) return 1;;
+      esac; }
+    scp() { echo "SCP ${*: -1}"; [ "$FAILSTEP" != scp ]; }
+    rc=0; probe_host node2 "/dev/disk/by-id/a b" "/dev/x;rm" 2>/dev/null || rc=$?
+    echo "RC=$rc"'
+}
+TMPRX='/opt/b/offline/disk-safety\.sh\.tmp\.[0-9]+'
+for step in scp mv; do
+  o=$(probe_sim $step)
+  if grep -q '^RC=[1-9]' <<<"$o"; then r=0; else r=1; fi; chk "$step failure -> probe_host non-zero (|| context)" $r
+  if grep -q '^SSH bash ' <<<"$o"; then r=1; else r=0; fi; chk "$step failure -> remote script NOT executed" $r
+  if grep -qE "^SSH rm -f $TMPRX\$" <<<"$o"; then r=0; else r=1; fi; chk "$step failure -> rm -f .tmp attempted" $r
+done
+o=$(probe_sim scp)
+if grep -q 'mv -f' <<<"$o"; then r=1; else r=0; fi; chk "scp failure -> no mv of partial .tmp" $r
+o=$(probe_sim mkdir)
+if grep -q '^RC=[1-9]' <<<"$o" && ! grep -qE '^SCP|^SSH bash ' <<<"$o"; then r=0; else r=1; fi; chk "mkdir failure -> non-zero, no scp/run" $r
+o=$(probe_sim probe)
+if grep -q '^RC=[1-9]' <<<"$o"; then r=0; else r=1; fi; chk "remote probe failure -> non-zero" $r
+o=$(probe_sim none)
+if grep -q '^RC=0$' <<<"$o" && [ "$(grep -c '^SSH rm -f' <<<"$o")" = 0 ]; then r=0; else r=1; fi; chk "success path rc=0, no cleanup" $r
+if grep -qF 'SSH bash /opt/b/offline/disk-safety.sh probe /dev/disk/by-id/a\ b /dev/x\;rm' <<<"$o"; then r=0; else r=1; fi; chk "remote probe args quoted with %q" $r
+o=$(probe_sim none '/opt/x y/$(id)/ds.sh')
+if grep -q '^RC=[1-9]' <<<"$o" && ! grep -qE '^SSH|^SCP' <<<"$o"; then r=0; else r=1; fi; chk "unsafe REMOTE_DISK_SAFETY rejected before any ssh" $r
+if grep -q 'a partial write never runs' "$OFF/add-osds.sh"; then r=1; else r=0; fi; o=comment; chk "misleading comment removed" $r
+# ---- SSH_STRICT_HOSTKEY must be a known value ----
+o=$(optsx "$W/base.conf" SSH_STRICT_HOSTKEY=maybe 2>&1) && r=1 || r=0
+if [ "$r" = 0 ] && [[ $o == *"SSH_STRICT_HOSTKEY='maybe' is invalid"* ]]; then r=0; else r=1; fi; chk "invalid env SSH_STRICT_HOSTKEY errors" $r
+{ cat "$W/base.conf"; printf 'SSH_STRICT_HOSTKEY=strict\n'; } > "$W/bad.conf"
+o=$(optsx "$W/bad.conf" 2>&1) && r=1 || r=0
+if [ "$r" = 0 ] && [[ $o == *"invalid SSH settings"* ]]; then r=0; else r=1; fi; chk "invalid conf SSH_STRICT_HOSTKEY errors in load_conf" $r
+for v in 0 no false 1 yes true; do o=$(optsx "$W/base.conf" SSH_STRICT_HOSTKEY=$v 2>&1) || o="ERR $o"; [[ $o != ERR* ]] || break; done
+if [[ $o != ERR* ]]; then r=0; else r=1; fi; chk "valid SSH_STRICT_HOSTKEY values accepted" $r
 echo "passed=$pass failed=$fail"; [ "$fail" -eq 0 ]

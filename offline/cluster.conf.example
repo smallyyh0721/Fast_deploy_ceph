@@ -9,7 +9,7 @@ BUNDLE_DIR="/opt/ceph-offline"          # where the bundle is extracted on every
 # Pinned-host-only (no AcceptNew): pin keys first, then uncomment:
 #   mkdir -p /etc/fast-deploy
 #   ssh-keyscan -t ed25519,rsa node2 node3 10.250.0.12 10.250.0.13 > /etc/fast-deploy/known_hosts
-# SSH_STRICT_HOSTKEY=1                     # 1 = StrictHostKeyChecking=yes
+# SSH_STRICT_HOSTKEY=1                     # 1/yes/true = StrictHostKeyChecking=yes; 0/no/false = accept-new; other values = error
 # SSH_KNOWN_HOSTS=/etc/fast-deploy/known_hosts   # UserKnownHostsFile
 # SSH_CONNECT_TIMEOUT=8
 # Precedence: an assignment here > exported environment variable > built-in default.

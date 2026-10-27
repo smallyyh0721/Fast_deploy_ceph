@@ -82,7 +82,7 @@ load_conf() {
   SSH_CONNECT_TIMEOUT=${SSH_CONNECT_TIMEOUT:-8}
   SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY:-0}
   SSH_KNOWN_HOSTS=${SSH_KNOWN_HOSTS:-}
-  ssh_build_opts
+  ssh_build_opts || die "invalid SSH settings (see above)"
 }
 
 # DRY_RUN=1: mutating commands are printed, not executed.
@@ -102,11 +102,13 @@ ssh_build_opts() {
   SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout="$ct")
   case $strict in
     1|yes|YES|true|TRUE) SSH_OPTS+=(-o StrictHostKeyChecking=yes);;
-    *) SSH_OPTS+=(-o StrictHostKeyChecking=accept-new);;
+    0|no|NO|false|FALSE) SSH_OPTS+=(-o StrictHostKeyChecking=accept-new);;
+    *) printf '\033[1;31m[FAIL]\033[0m %s\n' "SSH_STRICT_HOSTKEY='$strict' is invalid: use 1/yes/true (StrictHostKeyChecking=yes) or 0/no/false (accept-new, default)" >&2
+       return 1;;
   esac
   if [ -n "$kh" ]; then SSH_OPTS+=(-o "UserKnownHostsFile=$kh"); fi
 }
-ssh_build_opts
+ssh_build_opts || exit 1
 # Non-interactive remote: stdin closed (-n). Prefer this for all command invocations.
 ssh_node() { local h=$1; shift; ssh -n "${SSH_OPTS[@]}" "root@$h" "$@"; }
 # Rare: remote command must read stdin (tar pipe, cat >file). Caller feeds stdin.

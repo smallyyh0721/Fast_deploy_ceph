@@ -80,7 +80,7 @@ stage_bootstrap() { run bash "$HERE/bootstrap.sh"; }
 stage_hosts() { run bash "$HERE/add-hosts.sh" --apply; }
 stage_osd_preview() {
   if [ "$DRY_RUN" = 1 ]; then
-    echo "  [dry-run] ssh -n each OSD host: scp disk-safety.sh -> $BUNDLE_DIR/offline/disk-safety.sh.tmp.<pid>, mv to final path; bash <path> probe (lsblk/pvs/lvs/findmnt/wipefs) -> table CREATE/NEEDS-ZAP/SKIP/REFUSE"
+    echo "  [dry-run] ssh -n each OSD host: scp disk-safety.sh -> $BUNDLE_DIR/offline/disk-safety.sh.tmp.<node1 pid>, chmod+mv to final path (any failure: rm .tmp, abort); bash <path> probe (lsblk/pvs/lvs/findmnt/wipefs) -> table CREATE/NEEDS-ZAP/SKIP/REFUSE"
     echo "  [dry-run] any REFUSE -> abort; then operator types YES-WIPE-<N> + serial last-4 per NEEDS-ZAP disk (cannot be skipped, also not by --yes)"
     local e; for e in "${OSD_DEVICES[@]}"; do echo "    candidate ${e%%:*} $(cut -d: -f2 <<<"$e")"; done
     echo "  [dry-run] write $STATE_DIR/osd-plan.txt"
