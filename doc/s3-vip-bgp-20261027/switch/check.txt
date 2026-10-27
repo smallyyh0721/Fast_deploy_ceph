@@ -1,0 +1,7 @@
+display current-configuration configuration bgp
+display bgp peer ipv4
+display bgp routing-table ipv4 unicast 10.11.4.50 32
+display ip routing-table 10.11.4.50 32
+display fib 10.11.4.50
+display ip prefix-list name S3VIP50-IN
+display ip prefix-list name S3VIP50-OUT

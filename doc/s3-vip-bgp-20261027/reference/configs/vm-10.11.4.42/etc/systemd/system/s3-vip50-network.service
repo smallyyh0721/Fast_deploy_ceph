@@ -1,0 +1,11 @@
+[Unit]
+Description=VIP50 BGP dummy with VRRP ARP compatibility
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 /opt/s3-bgp-vip50/network.py up
+ExecStop=/usr/bin/python3 /opt/s3-bgp-vip50/network.py down
+[Install]
+WantedBy=multi-user.target

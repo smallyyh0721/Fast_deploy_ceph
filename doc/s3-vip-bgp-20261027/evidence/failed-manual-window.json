@@ -1,0 +1,43 @@
+{
+  "verdict": "FAIL",
+  "error": "Capture did not cover the complete probe window: nettest-41. Rerun run_split_test.py to synchronize both captures before the probe.",
+  "http_successes": 64,
+  "matched_ingress_connections": {
+    "10.11.4.41": 9,
+    "10.11.4.42": 34
+  },
+  "missing_source_ports": [
+    60498,
+    60510,
+    60530,
+    60576,
+    60586,
+    60598,
+    60602,
+    60618,
+    60634,
+    60666,
+    60676,
+    60692,
+    60708,
+    60724,
+    60812,
+    60816,
+    60822,
+    60826,
+    60832,
+    60842,
+    60858
+  ],
+  "duplicate_source_ports": [],
+  "capture_windows": {
+    "nettest-41": {
+      "started_relative_to_probe_seconds": -57.378,
+      "ended_relative_to_probe_end_seconds": -3.976
+    },
+    "nettest-42": {
+      "started_relative_to_probe_seconds": -33.006,
+      "ended_relative_to_probe_end_seconds": 20.359
+    }
+  }
+}

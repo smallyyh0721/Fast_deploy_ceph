@@ -5,6 +5,17 @@ Offline (air-gapped) 3-node Ceph Tentacle **20.2.4** toolkit for clean Ubuntu 24
 cephadm ingress (**haproxy + keepalived** container images in the offline pack). CephFS optional.
 Ceph CSI is a **separate** offline project — not in this repo.
 
+## S3 VIP + BGP/ECMP：后续 agent 交接
+
+已验证的实验方案、关键文件指引、交换机命令、VM配置、依赖和离线包改造任务见
+**[doc/s3-vip-bgp-20261027/README.md](doc/s3-vip-bgp-20261027/README.md)**。
+实验复用现有RGW ingress VIP，64次独立请求全部成功，两个入口分别27/37分流；
+**当前 `offline/deploy.sh` 和已发布离线包尚未集成该BGP功能**。
+后续 agent 请按交接清单修改参数、FRR/健康服务、离线依赖闭包、资源分发和打包，
+重建并验证带新版本和SHA256的新离线包，不直接重放实验脚本或重部署已有集群。
+
+## Existing offline toolkit
+
 - `build/` — internet machine: `./build/build-bundle.sh` → bundle + tar + `SHA256SUMS`
   - `images.list` pins `ceph`, `registry:2`, `haproxy:2.3`, `keepalived:2.2.4`
 - **One-click:** `sudo ./offline/deploy.sh --dry-run` then `sudo ./offline/deploy.sh` on node1 —

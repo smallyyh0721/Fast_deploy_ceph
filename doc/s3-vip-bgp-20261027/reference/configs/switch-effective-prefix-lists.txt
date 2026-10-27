@@ -1,0 +1,12 @@
+display ip prefix-list name S3VIP50-IN
+Prefix-list: S3VIP50-IN
+ Permitted 2
+ Denied 0
+	index: 10        Permit	10.11.4.50/32
+<业务网交换机>
+display ip prefix-list name S3VIP50-OUT
+Prefix-list: S3VIP50-OUT
+ Permitted 0
+ Denied 2
+	index: 10        Deny  	0.0.0.0/0           	le  32
+<业务网交换机>

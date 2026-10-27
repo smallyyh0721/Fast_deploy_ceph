@@ -1,0 +1,25 @@
+system-view
+ip prefix-list S3VIP50-IN index 10 permit 10.11.4.50 32
+ip prefix-list S3VIP50-OUT index 10 deny 0.0.0.0 0 less-equal 32
+bgp 65000
+ router-id 10.11.4.1
+ peer 10.11.4.41 as-number 65050
+ peer 10.11.4.42 as-number 65050
+ peer 10.11.4.41 timer keepalive 3 hold 9
+ peer 10.11.4.42 timer keepalive 3 hold 9
+ peer 10.11.4.41 ignore
+ peer 10.11.4.42 ignore
+ address-family ipv4 unicast
+  balance ebgp 2
+  peer 10.11.4.41 enable
+  peer 10.11.4.42 enable
+  peer 10.11.4.41 prefix-list S3VIP50-IN import
+  peer 10.11.4.41 prefix-list S3VIP50-OUT export
+  peer 10.11.4.42 prefix-list S3VIP50-IN import
+  peer 10.11.4.42 prefix-list S3VIP50-OUT export
+  peer 10.11.4.41 route-limit 1
+  peer 10.11.4.42 route-limit 1
+ quit
+ undo peer 10.11.4.41 ignore
+ undo peer 10.11.4.42 ignore
+return

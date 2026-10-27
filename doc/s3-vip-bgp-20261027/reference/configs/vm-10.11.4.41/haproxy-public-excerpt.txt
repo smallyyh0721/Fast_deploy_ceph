@@ -1,0 +1,13 @@
+# Selected public lines from the existing cephadm HAProxy. Not a complete deployable file.
+    mode                    http
+frontend stats
+    mode http
+    bind 10.11.4.50:1968
+    bind 10.11.4.41:1968
+frontend frontend
+    bind 10.11.4.50:80
+backend backend
+    balance static-rr
+    option httpchk HEAD / HTTP/1.0
+    server rgw.main.nettest-41.wwolrb 10.11.4.41:8080 check weight 100 inter 2s
+    server rgw.main.nettest-42.gsvaej 10.11.4.42:8080 check weight 100 inter 2s

@@ -1,0 +1,12 @@
+system-view
+bgp 65000
+ address-family ipv4 unicast
+  undo peer 10.11.4.41 enable
+  undo peer 10.11.4.42 enable
+ quit
+ undo peer 10.11.4.41
+ undo peer 10.11.4.42
+quit
+undo ip prefix-list S3VIP50-IN
+undo ip prefix-list S3VIP50-OUT
+return

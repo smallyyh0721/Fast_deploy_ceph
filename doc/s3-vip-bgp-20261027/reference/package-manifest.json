@@ -1,0 +1,26 @@
+[
+  {
+    "Package": "frr",
+    "Architecture": "amd64",
+    "Version": "8.4.4-1.1ubuntu6.7",
+    "Filename": "pool/main/f/frr/frr_8.4.4-1.1ubuntu6.7_amd64.deb",
+    "Size": "4300920",
+    "SHA256": "ccedcc8a053756575bd9f8935be012080eb70091991afd8bb44c95bd51267a20"
+  },
+  {
+    "Package": "libcares2",
+    "Architecture": "amd64",
+    "Version": "1.27.0-1.0ubuntu1",
+    "Filename": "pool/main/c/c-ares/libcares2_1.27.0-1.0ubuntu1_amd64.deb",
+    "Size": "73654",
+    "SHA256": "f84475f79e5b95c4caf98a7aef781bada3de44e9db05438b45b231da8fc7fc04"
+  },
+  {
+    "Package": "libyang2t64",
+    "Architecture": "amd64",
+    "Version": "2.1.30-2.1ubuntu0.1",
+    "Filename": "pool/main/liby/libyang2/libyang2t64_2.1.30-2.1ubuntu0.1_amd64.deb",
+    "Size": "497460",
+    "SHA256": "ee00c785b39db8e2da6f2e8d43cffcb501b5a6c7e54bebc64ee34918cc869e21"
+  }
+]

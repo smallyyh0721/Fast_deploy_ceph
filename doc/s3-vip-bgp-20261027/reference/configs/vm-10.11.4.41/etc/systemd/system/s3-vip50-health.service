@@ -1,0 +1,18 @@
+[Unit]
+Description=Health-controlled BGP declaration for existing Ceph S3 VIP50
+After=network-online.target frr.service s3-vip50-network.service
+Wants=frr.service
+Requires=s3-vip50-network.service
+[Service]
+Type=notify
+ExecStartPre=/usr/bin/python3 /opt/s3-bgp-vip50/health.py --withdraw
+ExecStart=/usr/bin/python3 /opt/s3-bgp-vip50/health.py
+ExecStopPost=/usr/bin/python3 /opt/s3-bgp-vip50/health.py --withdraw
+WatchdogSec=15s
+TimeoutStopSec=10s
+Restart=on-failure
+RestartSec=3s
+MemoryMax=64M
+CPUQuota=10%
+[Install]
+WantedBy=multi-user.target

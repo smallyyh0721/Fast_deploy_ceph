@@ -1,0 +1,266 @@
+{
+  "source_date": "2026-10-27",
+  "purpose": "agent handoff; reference snapshots, not integrated offline feature",
+  "copies": [
+    {
+      "path": "reference/health.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/health.py",
+      "sha256": "c6ba6f4921077335143161c7a6a8e7c1c73c5709fa7669d812ce299fb05a22ec",
+      "source_sha256": "c6ba6f4921077335143161c7a6a8e7c1c73c5709fa7669d812ce299fb05a22ec"
+    },
+    {
+      "path": "reference/network.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/network.py",
+      "sha256": "9a55f6cb165bcacae1c8e801b0d73b5259f35adf7c449765f8190e5cbbf2f5a5",
+      "source_sha256": "9a55f6cb165bcacae1c8e801b0d73b5259f35adf7c449765f8190e5cbbf2f5a5"
+    },
+    {
+      "path": "reference/configure_vms.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configure_vms.py",
+      "sha256": "de75334cd43f5bcd14bc76faf1da9da45106e53f307732dfa21692a55357119a",
+      "source_sha256": "de75334cd43f5bcd14bc76faf1da9da45106e53f307732dfa21692a55357119a"
+    },
+    {
+      "path": "reference/routed_probe_vm40.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/routed_probe_vm40.py",
+      "sha256": "5355af76d8da91641f732d74726864c91ec2ebdce315a9c516eb0ff6caad7d2a",
+      "source_sha256": "5355af76d8da91641f732d74726864c91ec2ebdce315a9c516eb0ff6caad7d2a"
+    },
+    {
+      "path": "reference/capture_ingress_vm.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/capture_ingress_vm.py",
+      "sha256": "a60c2b405d48fcb27a07a203ee92005fd404c082ead13560902dded17b4051a9",
+      "source_sha256": "a60c2b405d48fcb27a07a203ee92005fd404c082ead13560902dded17b4051a9"
+    },
+    {
+      "path": "reference/analyze_split.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/analyze_split.py",
+      "sha256": "ebdd7ac3fce476fb48d2bd7188fbc8a93561fcdfb178789911e34dabfc0db33b",
+      "source_sha256": "ebdd7ac3fce476fb48d2bd7188fbc8a93561fcdfb178789911e34dabfc0db33b"
+    },
+    {
+      "path": "reference/package-manifest.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/package-manifest.json",
+      "sha256": "5e6d234660aee2a91a7a5c0caa614585c67e240e0c0921197fad265440ea9c32",
+      "source_sha256": "c7ecfee0ed2fe7807d6ca56801951d346d112c8b15fcbb41201beb6f6fd9b8c6"
+    },
+    {
+      "path": "reference/configs/ceph-services-selected-fields.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/ceph-services-selected-fields.json",
+      "sha256": "e2e208514bd48a30331f220d20847cbbe0a27855ff4d932c2517eb2caacb7cae",
+      "source_sha256": "8e5accbd8713b8f3bfbf87f9a0f19943360f73e1a7695f2869fef4bd3ca8971d"
+    },
+    {
+      "path": "reference/configs/README.md",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/README.md",
+      "sha256": "78dd7c81dba4b72dd98c04b8fefd54c6e26961e8c5b0acd06708d5fb6e08c0f8",
+      "source_sha256": "ed9cb21044e661489275d86acd817a9061be62e83967d89b94605e8e60e8fec6"
+    },
+    {
+      "path": "reference/configs/switch-effective-prefix-lists.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/switch-effective-prefix-lists.txt",
+      "sha256": "ffa2da32d13f48963f3bd4396b89ad6f08350e465c17d4c9ddda970d48a76d5d",
+      "source_sha256": "628316fefa8928a29b684f3142e051a1046553382fe5e6dbb33890bbb3d1f631"
+    },
+    {
+      "path": "reference/configs/switch-running-bgp.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/switch-running-bgp.txt",
+      "sha256": "8b6fbf103147c004494af63498c5e48ad95c17361fa17f16339df19780e2a397",
+      "source_sha256": "5eb5f736a3a7b6e44a7505d970c47d9dbb91403a4a57340cee34a261759d006b"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/haproxy-public-excerpt.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/haproxy-public-excerpt.txt",
+      "sha256": "d090fdfb720f0f621570f977c2b922c2a53188ea8e193243c4666f87e2719748",
+      "source_sha256": "59bed77bd383b8da834e10c911d7de14a7da0908985c542c6a92e640b868536a"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/haproxy-public-excerpt.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/haproxy-public-excerpt.txt",
+      "sha256": "13b45dcbb90440af65fc9d7664935081506289e0c44d63f33d95dfeb008b53fa",
+      "source_sha256": "2f686240f78bb00d2a73969c030a26396970f5b24e91009c1acd2b6681745211"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/opt/s3-bgp-vip50/health.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/opt/s3-bgp-vip50/health.py",
+      "sha256": "c6ba6f4921077335143161c7a6a8e7c1c73c5709fa7669d812ce299fb05a22ec",
+      "source_sha256": "3c4dfea62cc947b0933f70c40f0c6de20b292f7c9e6b2dbdd6fca8479138bb24"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/opt/s3-bgp-vip50/network.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/opt/s3-bgp-vip50/network.py",
+      "sha256": "9a55f6cb165bcacae1c8e801b0d73b5259f35adf7c449765f8190e5cbbf2f5a5",
+      "source_sha256": "36d34fe21caefe101d4baf8a1093b713e9b2155f360d8afd1ae562d8d77c5e4c"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/frr/daemons.required-flags.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/frr/daemons.required-flags.txt",
+      "sha256": "1445463ef621349a1e875dca891d3d1c1ef4a257e96647d37ab81655d87cc133",
+      "source_sha256": "ed02a59c1e31da1e3a89c582d6b8cbbfa5a8b914266dedb217b2fbddfe781126"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/frr/frr.conf",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/frr/frr.conf",
+      "sha256": "4ea37fd1c24d320f9fd91cbc8aa73964bd1b3d47f7846107fffc474bbc148d70",
+      "source_sha256": "318d89d06750a542a921dc173a50b1e95bbc0d044a10854aaa4a64c4a2a28b38"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/s3-bgp-vip50/settings.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/s3-bgp-vip50/settings.json",
+      "sha256": "eac6570bc413d353d29a66a74083c4133839509d142e1931762ad72f1e35056f",
+      "source_sha256": "751a20a85923471618230f6065ad7dcf56bf9dc93d71c66b46cbf47ef19c0824"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/sysctl.d/90-s3-bgp-vip50.conf",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/sysctl.d/90-s3-bgp-vip50.conf",
+      "sha256": "a862e220ede4a032202afb49d6a6d7c02b9c8853209f4af8ba66e07d0655506e",
+      "source_sha256": "5588668e43c72c422824422dd8cbdffe05b6874524536cc549ac88e16c7709fb"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/systemd/system/s3-vip50-health.service",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/systemd/system/s3-vip50-health.service",
+      "sha256": "6b48ce3dca60bb2d6dc5964cf766b995562755ad76c5a65c4a7fc858c1ae88de",
+      "source_sha256": "1c5f0ae7aebb6c4af3e7edd7ce8ca3037074285c8e3d7128db57a89060d70548"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/systemd/system/s3-vip50-network.service",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/systemd/system/s3-vip50-network.service",
+      "sha256": "5360d35900d123984a1086d193a3d5c25698b833978e9b729643426f24c18397",
+      "source_sha256": "ced813cc864118d879dace31ac10fe565bcd7ad2484a86fdf2c4d7b42d5ebdfa"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.42/etc/systemd/system/frr.service.d/s3-vip50.conf",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.42/etc/systemd/system/frr.service.d/s3-vip50.conf",
+      "sha256": "688948dad34aa8c77642b1fad4691773a22445fa52c64c939218a2a3ae8599da",
+      "source_sha256": "d5c643754e9911f662a9b2072ddfb83a931e38c5f22f2e12cfede9161145d2df"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/opt/s3-bgp-vip50/health.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/opt/s3-bgp-vip50/health.py",
+      "sha256": "c6ba6f4921077335143161c7a6a8e7c1c73c5709fa7669d812ce299fb05a22ec",
+      "source_sha256": "3c4dfea62cc947b0933f70c40f0c6de20b292f7c9e6b2dbdd6fca8479138bb24"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/opt/s3-bgp-vip50/network.py",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/opt/s3-bgp-vip50/network.py",
+      "sha256": "9a55f6cb165bcacae1c8e801b0d73b5259f35adf7c449765f8190e5cbbf2f5a5",
+      "source_sha256": "36d34fe21caefe101d4baf8a1093b713e9b2155f360d8afd1ae562d8d77c5e4c"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/frr/daemons.required-flags.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/frr/daemons.required-flags.txt",
+      "sha256": "1445463ef621349a1e875dca891d3d1c1ef4a257e96647d37ab81655d87cc133",
+      "source_sha256": "ed02a59c1e31da1e3a89c582d6b8cbbfa5a8b914266dedb217b2fbddfe781126"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/frr/frr.conf",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/frr/frr.conf",
+      "sha256": "bb452d91a855b5b687aadd0f2c7fc82fcfbd66692b5168244fa760a167205407",
+      "source_sha256": "6f3587a050e232d90f1ed33107b495a37a600a47214913e4bcc7ad8a1bdb2fae"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/s3-bgp-vip50/settings.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/s3-bgp-vip50/settings.json",
+      "sha256": "30554ab90500fab1e9e066727a57a02fe2c15fbc205d8b97c25c87930abdb5ed",
+      "source_sha256": "65e8ac95b48bb1d6f2fde310a0d76070f343284c5dc32f080a4b4c57466ed977"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/sysctl.d/90-s3-bgp-vip50.conf",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/sysctl.d/90-s3-bgp-vip50.conf",
+      "sha256": "a862e220ede4a032202afb49d6a6d7c02b9c8853209f4af8ba66e07d0655506e",
+      "source_sha256": "5588668e43c72c422824422dd8cbdffe05b6874524536cc549ac88e16c7709fb"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/systemd/system/s3-vip50-health.service",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/systemd/system/s3-vip50-health.service",
+      "sha256": "6b48ce3dca60bb2d6dc5964cf766b995562755ad76c5a65c4a7fc858c1ae88de",
+      "source_sha256": "1c5f0ae7aebb6c4af3e7edd7ce8ca3037074285c8e3d7128db57a89060d70548"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/systemd/system/s3-vip50-network.service",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/systemd/system/s3-vip50-network.service",
+      "sha256": "5360d35900d123984a1086d193a3d5c25698b833978e9b729643426f24c18397",
+      "source_sha256": "ced813cc864118d879dace31ac10fe565bcd7ad2484a86fdf2c4d7b42d5ebdfa"
+    },
+    {
+      "path": "reference/configs/vm-10.11.4.41/etc/systemd/system/frr.service.d/s3-vip50.conf",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/vm-10.11.4.41/etc/systemd/system/frr.service.d/s3-vip50.conf",
+      "sha256": "688948dad34aa8c77642b1fad4691773a22445fa52c64c939218a2a3ae8599da",
+      "source_sha256": "d5c643754e9911f662a9b2072ddfb83a931e38c5f22f2e12cfede9161145d2df"
+    },
+    {
+      "path": "switch/apply.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/switch-apply.txt",
+      "sha256": "d348f12102a97cb5f1398254d18a62e3358edfb94e1453914145e995c3b7ac25",
+      "source_sha256": "d348f12102a97cb5f1398254d18a62e3358edfb94e1453914145e995c3b7ac25"
+    },
+    {
+      "path": "switch/check.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/switch-check.txt",
+      "sha256": "54efe29443b74b5f9a44db4636f51976fbc2b819e24a3984603021c92429fbc2",
+      "source_sha256": "54efe29443b74b5f9a44db4636f51976fbc2b819e24a3984603021c92429fbc2"
+    },
+    {
+      "path": "switch/rollback.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/switch-rollback.txt",
+      "sha256": "0ad1d2d3376046b6421f7517f01d9b495b2791e51035bd0158ffba30e9dc283d",
+      "source_sha256": "0ad1d2d3376046b6421f7517f01d9b495b2791e51035bd0158ffba30e9dc283d"
+    },
+    {
+      "path": "switch/resume-peer-order.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/switch-resume-peer-order.txt",
+      "sha256": "4f31160e82a79822f6646d6ce244ba8aafbc1265a8814d0c7ec798b084ab50e5",
+      "source_sha256": "4f31160e82a79822f6646d6ce244ba8aafbc1265a8814d0c7ec798b084ab50e5"
+    },
+    {
+      "path": "switch/running-bgp.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/switch-running-bgp.txt",
+      "sha256": "8b6fbf103147c004494af63498c5e48ad95c17361fa17f16339df19780e2a397",
+      "source_sha256": "5eb5f736a3a7b6e44a7505d970c47d9dbb91403a4a57340cee34a261759d006b"
+    },
+    {
+      "path": "switch/prefix-lists.txt",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/configs/switch-effective-prefix-lists.txt",
+      "sha256": "ffa2da32d13f48963f3bd4396b89ad6f08350e465c17d4c9ddda970d48a76d5d",
+      "source_sha256": "628316fefa8928a29b684f3142e051a1046553382fe5e6dbb33890bbb3d1f631"
+    },
+    {
+      "path": "historical-ceph-deployment.md",
+      "source_workspace_path": "Test_ceph/oneclick-nettest.md",
+      "sha256": "c67ed6da6fd45e912237c256f9808b5f8b5a5904ff5783c17e18054cf48d7123",
+      "source_sha256": "c67ed6da6fd45e912237c256f9808b5f8b5a5904ff5783c17e18054cf48d7123"
+    },
+    {
+      "path": "evidence/probe.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/execution/split-sync-20261027T023814Z-0f08e7/probe-10.11.4.40.json",
+      "sha256": "33fd1584155946137120e7d72dfa8af6ae7c9874a4bda6a64215338bf73660ad",
+      "source_sha256": "0b1d0ff2251f5fbbf4654bef5554c556f0560cd06b23e658b9b73e23adc0b805"
+    },
+    {
+      "path": "evidence/capture-41.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/execution/split-sync-20261027T023814Z-0f08e7/capture-10.11.4.41.json",
+      "sha256": "790bbb83f7e7e7eb5f9e3abbb03afc8354ee1be69d62a13f663f259829c4a7b2",
+      "source_sha256": "fd73402d296a07da66735be2aee43b3800879c475431ab2b3af4636a04f73f94"
+    },
+    {
+      "path": "evidence/capture-42.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/execution/split-sync-20261027T023814Z-0f08e7/capture-10.11.4.42.json",
+      "sha256": "9f0325ee2efbd203da47248c5d960b686fe319026ffac0b0a8a75ec348d10029",
+      "source_sha256": "f0b31df100a6ceddbf2754d5b44b855dfd7d897e1d2d4cbe29fe283f755a744f"
+    },
+    {
+      "path": "evidence/failed-manual-window.json",
+      "source_workspace_path": "Test_ceph/s3-bgp-vip50-20261027/execution/split-result.json",
+      "sha256": "f379990fa733d20f68245ccd059011d014cfbd112f601e9f7f14626c901f1e87",
+      "source_sha256": "9d87cc724721db9d84f250ee2a60f1c6e3415e39e4b33dc44a33528ecc93a8b5"
+    }
+  ],
+  "derived_documents": [
+    "DEPENDENCIES.md",
+    "CONFIGURATION.md",
+    "TESTING.md",
+    "README.md"
+  ],
+  "credentials_and_deb_payloads_included": false,
+  "normalization": "Published reference text uses LF and removes trailing whitespace; source_sha256 retains original copied bytes."
+}

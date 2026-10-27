@@ -1,0 +1,6 @@
+{
+  "vip": "10.11.4.50/32",
+  "asn": 65050,
+  "local_ip": "10.11.4.42",
+  "haproxy_config": "/var/lib/ceph/16c96e91-d119-11f1-9c37-021104000028/haproxy.rgw.main.nettest-42.cstpcc/haproxy/haproxy.cfg"
+}

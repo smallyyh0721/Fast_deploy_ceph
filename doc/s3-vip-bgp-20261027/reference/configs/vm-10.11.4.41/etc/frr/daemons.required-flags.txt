@@ -1,0 +1,3 @@
+# Required edits only; NOT a complete daemons file. Zebra/staticd are implicit.
+bgpd=yes
+bfdd=no

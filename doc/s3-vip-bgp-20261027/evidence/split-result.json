@@ -1,0 +1,25 @@
+{
+  "verdict": "PASS",
+  "http_successes": 64,
+  "matched_ingress_connections": {
+    "10.11.4.41": 27,
+    "10.11.4.42": 37
+  },
+  "missing_source_ports": [],
+  "duplicate_source_ports": [],
+  "capture_windows": {
+    "nettest-41": {
+      "started_relative_to_probe_seconds": -1.171,
+      "ended_relative_to_probe_end_seconds": 52.21
+    },
+    "nettest-42": {
+      "started_relative_to_probe_seconds": -1.688,
+      "ended_relative_to_probe_end_seconds": 51.667
+    }
+  },
+  "run_id": "split-sync-20261027T023814Z-0f08e7",
+  "gateway_source_mac": "0c:27:79:2f:b5:a4",
+  "source_route_restored": true,
+  "meaning": "Both ingress VMs received distinct routed test TCP connections; exact 50/50 is not required.",
+  "bgp_and_ingress_postcheck": "passed"
+}
