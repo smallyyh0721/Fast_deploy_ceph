@@ -1,0 +1,5 @@
+# managed-by: fast-deploy-s3-bgp
+# Business interface @IFACE@ only: a node that holds the VIP only on dummy @DUMMY@
+# must not answer ARP for it (the keepalived/VRRP master still does). Nothing else is changed.
+net.ipv4.conf.@IFACE_KEY@.arp_ignore=1
+net.ipv4.conf.@IFACE_KEY@.arp_announce=2

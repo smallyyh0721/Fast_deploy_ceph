@@ -1,0 +1,8 @@
+# managed-by: fast-deploy-s3-bgp  (drop-in for frr.service)
+# Resource limits only. No ordering on s3-bgp-network.service here: frr.service is
+# Before=network.target, and s3-bgp-network is After=network-online.target, so an
+# After=/Requires= edge would form a boot-time ordering cycle (systemd then drops a job).
+# s3-bgp-health.service is ordered after both and only announces when the /32 exists.
+[Service]
+MemoryMax=192M
+CPUQuota=20%

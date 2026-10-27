@@ -1,0 +1,14 @@
+# managed-by: fast-deploy-s3-bgp
+[Unit]
+Description=S3 BGP VIP dummy @DUMMY@ (@VIP@/32) + ARP settings on @IFACE@ only
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/fast-deploy-s3-bgp/network.sh up
+ExecStop=/usr/local/lib/fast-deploy-s3-bgp/network.sh down
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+# managed-by: fast-deploy-s3-bgp
+[Unit]
+Description=Health-controlled BGP announcement of S3 VIP @VIP@/32 (existing cephadm ingress)
+After=network-online.target frr.service s3-bgp-network.service
+Wants=frr.service
+Requires=s3-bgp-network.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+ExecStartPre=/usr/local/lib/fast-deploy-s3-bgp/health.sh withdraw
+ExecStart=/usr/local/lib/fast-deploy-s3-bgp/health.sh run
+ExecStopPost=/usr/local/lib/fast-deploy-s3-bgp/health.sh withdraw
+WatchdogSec=@WATCHDOG@s
+TimeoutStopSec=10s
+Restart=on-failure
+RestartSec=3s
+MemoryMax=64M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target
