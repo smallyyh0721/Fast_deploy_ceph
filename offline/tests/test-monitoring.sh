@@ -50,7 +50,7 @@ done
 has "spec ceph-exporter on all hosts" "service_type: ceph-exporter" "$out"
 has "spec node-exporter" "service_type: node-exporter" "$out"
 has "spec retention default 15d" 'retention_time: "15d"' "$out"
-has "spec retention size default 0" 'retention_size: "0"' "$out"
+hasnt "spec retention size 0 = key omitted (cephadm rejects \"0\")" "retention_size" "$out"
 has "spec alertmanager" "service_type: alertmanager" "$out"
 has "spec grafana count:1" "count: 1" "$out"
 has "dashboard 8443" "ssl_server_port 8443" "$out"
@@ -117,6 +117,8 @@ case $c in
   *"config-key exists mgr/dashboard/crt"*) exit "${MOCK_CRT_EXISTS:-1}";;
   *"dashboard ac-user-show"*) exit "${MOCK_USER_EXISTS:-2}";;
   *"secure_monitoring_stack"*) echo false;;
+  *"orch ls --format json"*) [ "${MOCK_APPLY_REJECTED:-0}" = 1 ] && { echo '[{"service_type": "mon"}]'; exit 0; }
+                             for t in ceph-exporter node-exporter prometheus alertmanager grafana; do printf '{"service_type": "%s"}\n' "$t"; done;;
   *"osd getcrushmap"*) printf 'BIN\001\002';;
   *"radosgw-admin"*) [ "${MOCK_NO_RGW:-0}" = 1 ] && { echo "no realm" >&2; exit 2; }; echo '{}';;
   *) echo "out:$c";;
@@ -174,6 +176,10 @@ hasnt "grafana password not printed" "g'pw" "$out"
 out=$(runm "$W/a.conf" MOCK_REG_EMPTY=1); rc=$?
 check "registry without monitoring images -> fail" 1 "$rc"; has "registry error message" "has no prometheus/prometheus:v3.6.0" "$out"
 hasnt "registry missing: nothing applied" "orch apply" "$(cat "$W/m/argv.log" 2>/dev/null)"
+out=$(runm "$W/a.conf" MOCK_APPLY_REJECTED=1); rc=$?
+check "orch apply silently rejected -> fail" 1 "$rc"
+has "rejected spec reported" "service ceph-exporter missing after 'ceph orch apply'" "$out"
+hasnt "rejected spec: dashboard not touched" "mgr/dashboard/ssl true" "$(cat "$W/m/argv.log" 2>/dev/null)"
 
 # ---- 4. deploy.sh / verify.sh wiring ---------------------------------------------------------
 out=$(CONF="$W/def.conf" bash "$O/deploy.sh" --dry-run 2>&1)

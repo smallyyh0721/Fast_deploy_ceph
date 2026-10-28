@@ -60,8 +60,9 @@ service_type: prometheus
 $(placement_yaml)
 spec:
   retention_time: "$PROMETHEUS_RETENTION_TIME"
-  retention_size: "$PROMETHEUS_RETENTION_SIZE"
 EOF
+  # cephadm rejects "0" (needs a unit); 0 = no size limit = omit the key
+  if [ "$PROMETHEUS_RETENTION_SIZE" != 0 ]; then printf '  retention_size: "%s"\n' "$PROMETHEUS_RETENTION_SIZE"; fi
   if [ "$ENABLE_ALERTMANAGER" = 1 ]; then
     printf -- '---\nservice_type: alertmanager\n%s\n' "$(placement_yaml)"
   fi
@@ -129,6 +130,11 @@ if [ "$ENABLE_MONITORING" = 1 ]; then
   log "ceph orch apply: ceph-exporter node-exporter prometheus$([ "$ENABLE_ALERTMANAGER" = 1 ] && echo ' alertmanager') grafana (retention ${PROMETHEUS_RETENTION_TIME}/${PROMETHEUS_RETENTION_SIZE})"
   ceph_in "$TMP/monitoring.yaml" orch apply -i -
   rm -f "$TMP/monitoring.yaml"
+  # 'ceph orch apply' exits 0 even when it rejects the spec: confirm every service now exists
+  ls_json=$(ceph_ orch ls --format json)
+  for svc in ceph-exporter node-exporter prometheus $([ "$ENABLE_ALERTMANAGER" = 1 ] && echo alertmanager) grafana; do
+    grep -q "\"service_type\": *\"$svc\"" <<<"$ls_json" || die "service $svc missing after 'ceph orch apply' (spec rejected? see output above)"
+  done
 fi
 
 if [ "$ENABLE_DASHBOARD" = 1 ]; then
