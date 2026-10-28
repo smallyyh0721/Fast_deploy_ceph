@@ -14,3 +14,6 @@ nvme-cli
 smartmontools
 ca-certificates
 ceph-common
+# same version as ceph-common (pinned to CEPH_VERSION by download-debs.sh, download.ceph.com)
+librados2
+librbd1

@@ -8,6 +8,8 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/.." && pwd)
 OUT=${OUT:-$REPO/../Fast_deploy_ceph-bundle}
 MAKE_TAR=${MAKE_TAR:-1}
+BUNDLE_SUFFIX=${BUNDLE_SUFFIX:-oneclick.3-$(date +%Y%m%d)}   # tar: ceph-offline-<ver>-<suffix>-bundle.tar
+SPLIT_SIZE=${SPLIT_SIZE:-1900M}   # GitHub release assets must be < 2 GiB: split bigger tars ("" = never)
 SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO=sudo
 mkdir -p "$OUT"/{debs,images,bin}
 
@@ -41,7 +43,7 @@ done < "$HERE/images.list"
 
 echo "== debs from clean ubuntu:24.04 container"
 $SUDO podman pull --arch "$ARCH" docker.io/library/ubuntu:24.04
-$SUDO podman run --rm --network host -v "$OUT/debs:/out:Z" -v "$HERE:/build:ro,Z" docker.io/library/ubuntu:24.04 \
+$SUDO podman run --rm --network host -e CEPH_VERSION="$CEPH_VERSION" -v "$OUT/debs:/out:Z" -v "$HERE:/build:ro,Z" docker.io/library/ubuntu:24.04 \
   bash /build/download-debs.sh /out /build/packages.list
 $SUDO chown -R "$(id -u):$(id -g)" "$OUT"
 
@@ -54,7 +56,13 @@ echo "== SHA256SUMS"
 ( cd "$OUT" && find debs images bin offline docs -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/SHA256SUMS.$$ && mv /tmp/SHA256SUMS.$$ SHA256SUMS )
 du -sh "$OUT"
 if [ "$MAKE_TAR" = 1 ]; then
-  T="$(dirname "$OUT")/ceph-offline-${CEPH_VERSION}-vip-bundle.tar"
+  T="$(dirname "$OUT")/ceph-offline-${CEPH_VERSION}-${BUNDLE_SUFFIX}-bundle.tar"
   tar -C "$(dirname "$OUT")" -cf "$T" "$(basename "$OUT")"
-  sha256sum "$T" | tee "$T.sha256"
+  ( cd "$(dirname "$T")" && sha256sum "$(basename "$T")" ) | tee "$T.sha256"
+  if [ -n "$SPLIT_SIZE" ] && [ "$(stat -c %s "$T")" -gt 2147483000 ]; then
+    rm -f "$T".part-*
+    split -b "$SPLIT_SIZE" -d -a 2 "$T" "$T.part-"
+    ( cd "$(dirname "$T")" && sha256sum "$(basename "$T")".part-* ) | tee "$T.parts.sha256"
+    echo "split: cat $(basename "$T").part-* > $(basename "$T") && sha256sum -c $(basename "$T").sha256"
+  fi
 fi

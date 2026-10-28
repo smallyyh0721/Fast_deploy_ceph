@@ -36,7 +36,8 @@ sudo ./deploy.sh --list             # 查看阶段标记
 | 07 | rgw | `setup-rgw.sh`（`ENABLE_RGW=1`）：realm/zonegroup/zone、`orch apply rgw`；`RGW_INGRESS=1` 时 cephadm ingress（haproxy+keepalived）独立 VIP `RGW_VIP` |
 | 08 | cephfs | `setup-cephfs.sh`（`ENABLE_CEPHFS=1`，`MDS_HOSTS` 定位） |
 | 09 | vip | `setup-ingress-vip.sh --apply`（`ENABLE_MON_VIP=1`） |
-| 10 | verify | `verify.sh`：ceph -s / health / osd tree / pools / orch ps / RGW curl / fs status + 汇总（`ENABLE_S3_BGP=1` 时另报每台 BGP 节点状态） |
+| 10 | monitoring | `setup-monitoring.sh`（`ENABLE_MONITORING=1` / `ENABLE_DASHBOARD=1`，默认开）：镜像键指向本地 registry；ceph-exporter、node-exporter、prometheus（保留期可配）、alertmanager（不配 webhook/SMTP）、grafana；Dashboard HTTPS 8443（自有证书或自签，管理员密码从文件读、不打印）。老集群补装：`--only monitoring`。见 [monitoring.md](monitoring.md) |
+| 11 | verify | `verify.sh`：ceph -s / health / osd tree / pools / orch ps / RGW curl / fs status + 汇总（`ENABLE_S3_BGP=1` 时另报每台 BGP 节点状态；监控开启时检查监控服务 running、ceph-exporter `:9926` 指标、mgr `:9283`、服务发现 `:8765`、prometheus ready，并打印 Dashboard 地址） |
 | — | s3-bgp | **可选，不在默认流程和 `--from` 内**，只能 `./deploy.sh --only s3-bgp`（需 `ENABLE_S3_BGP=1`）：`setup-s3-bgp.sh`，见 [s3-bgp.md](s3-bgp.md) |
 
 ## OSD 安全闸门（不可绕过）
@@ -69,7 +70,14 @@ sudo ./deploy.sh --only s3-bgp               # 或 ./setup-s3-bgp.sh [--host nod
 sudo ./verify.sh                              # 每台 LOCAL-OK / PENDING-SWITCH / ...
 sudo ./teardown-s3-bgp.sh                     # 回退（先回退交换机）
 ```
-`ENABLE_S3_BGP=0`（默认）时默认流程与 oneclick.1 逐行一致；VIP（keepalived/haproxy）在两种模式下都保持不变。
+`ENABLE_S3_BGP=0`（默认）时不碰 BGP（oneclick.3 起默认流程多了 monitoring 阶段，与 s3-bgp 无关）；VIP（keepalived/haproxy）在两种模式下都保持不变。
+
+## 监控与 Dashboard（默认部署）
+见 [monitoring.md](monitoring.md)：端口表、外部 Prometheus 采集示例（`http_sd_configs` → `:8765`）、Dashboard 证书与密码文件。
+告警只通过指标导出，不配置任何 webhook / SMTP。
+
+## 元数据备份（手动，默认不跑）
+`sudo ./backup-cluster-meta.sh [--out DIR]`：只读导出 `/etc/ceph`、auth、config、config-key、`orch ls --export`、crushmap、mon/osd/fs dump、RGW realm/zone → 带日期 tar（600）。不在 deploy 流程、不装定时任务；可选定时示例见 [backup.md](backup.md)。
 
 ## 旧用法
 分步脚本 `install-node.sh / bootstrap.sh / add-hosts.sh / add-osds.sh / setup-*.sh` 仍可单独使用（`add-osds.sh --yes-i-really-mean-it` 现在也要求同样的键入确认）。

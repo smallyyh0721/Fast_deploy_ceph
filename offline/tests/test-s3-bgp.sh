@@ -170,7 +170,7 @@ check "teardown --dry-run rc" 0 "$rc"; has "teardown restores ARP" "restore arp_
 out=$(CONF="$W/on.conf" bash "$O/deploy.sh" --dry-run --only s3-bgp 2>&1); rc=$?
 check "deploy --only s3-bgp dry-run rc" 0 "$rc"; has "deploy --only s3-bgp renders" "permit 10.250.0.20/32" "$out"
 out=$(CONF="$W/on.conf" bash "$O/deploy.sh" --dry-run 2>&1)
-has "default run stage list unchanged" "stages: validate install bootstrap hosts osd-preview osd pools rgw cephfs vip verify" "$out"
+has "default run stage list (no s3-bgp)" "stages: validate install bootstrap hosts osd-preview osd pools rgw cephfs vip monitoring verify" "$out"
 hasnt "default run never configures BGP" "prefix-list" "$out"
 out=$(CONF="$W/on.conf" bash "$O/deploy.sh" --dry-run --from s3-bgp 2>&1); check "--from s3-bgp rejected" 1 "$?"
 out=$(CONF="$W/off.conf" bash "$O/deploy.sh" --dry-run --only s3-bgp 2>&1); check "--only s3-bgp with ENABLE_S3_BGP=0 fails" 1 "$?"

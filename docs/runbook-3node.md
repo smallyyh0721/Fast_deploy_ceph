@@ -326,7 +326,8 @@ RGW VIP（`RGW_INGRESS=1`）验收通过后才做；默认不做。步骤：`ENA
 
 ## 10. 验收清单
 
-以下命令均在 **node1** 执行。统一用 `cephadm shell`（宿主机直接 `ceph -s` 可能因旧版 `ceph-common` / keyring 报错，不代表集群异常）。
+以下命令均在 **node1** 执行。统一用 `cephadm shell`（oneclick.3 起宿主机 `ceph-common` 已是 20.2.4，宿主机 `ceph -s` 也可用；旧包为 Ubuntu 19.2.x，可能报错，不代表集群异常）。
+监控/Dashboard（oneclick.3 默认部署）：`sudo ./verify.sh` 会打印 Dashboard 地址并检查 prometheus / ceph-exporter / 服务发现；端口与外部采集见 `docs/monitoring.md`。元数据备份（手动）：`sudo ./backup-cluster-meta.sh`，见 `docs/backup.md`。
 
 ### 10.1 集群监控（健康 / MON / MGR）
 

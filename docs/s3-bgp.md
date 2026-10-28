@@ -49,7 +49,7 @@
 6. 交换机侧人工执行：[s3-bgp-switch-h3c.md](s3-bgp-switch-h3c.md)。
 7. `sudo ./verify.sh`：每台报告 `LOCAL-OK`（健康服务运行、peer Established、只发布 VIP/32、收到 0 条）/ `PENDING-SWITCH`（本机就绪、peer 未建立）/ `WITHDRAWN-UNHEALTHY` / `FAIL`。这只是**节点侧**结论；端到端 ECMP 必须从经 Leaf 路由的客户端测（多次独立 TCP 连接，按源端口哈希，不要求 50/50；参见 `doc/s3-vip-bgp-20261027/TESTING.md`）。
 
-`s3-bgp` 不在默认阶段列表，`--from` 不会跑到它；`ENABLE_S3_BGP=0` 时 `deploy.sh` 的默认行为与 oneclick.1 完全一致（干跑输出逐行比对，见 release notes）。
+`s3-bgp` 不在默认阶段列表，`--from` 不会跑到它；`ENABLE_S3_BGP=0` 时 `deploy.sh` 不碰 BGP；oneclick.2 默认行为与 oneclick.1 逐行一致，oneclick.3 起默认多一个 `monitoring` 阶段（见 [monitoring.md](monitoring.md)）。
 
 ## 回退
 1. 先交换机：[s3-bgp-switch-h3c.md#回退](s3-bgp-switch-h3c.md#回退)。

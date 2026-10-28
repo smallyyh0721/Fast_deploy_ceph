@@ -12,6 +12,11 @@ CHECKS=(
 if [ "$DRY_RUN" = 1 ]; then
   for c in "${CHECKS[@]}"; do echo "  [dry-run] cephadm shell -- $c"; done
   [ "$ENABLE_RGW" = 1 ] && echo "  [dry-run] curl S3 endpoint (expect ListAllMyBucketsResult/AccessDenied XML)"
+  if [ "$ENABLE_MONITORING" = 1 ]; then
+    echo "  [dry-run] wait <= ${MONITORING_WAIT:-300}s: orch ls ceph-exporter node-exporter prometheus$([ "$ENABLE_ALERTMANAGER" = 1 ] && echo ' alertmanager') grafana running == size"
+    echo "  [dry-run] curl ceph-exporter :9926/metrics (ceph_*), mgr :9283/metrics, prometheus :9095/-/ready, SD :$SD_PORT/sd/prometheus/sd-config?service=ceph-exporter"
+  fi
+  [ "$ENABLE_DASHBOARD" = 1 ] && echo "  [dry-run] ceph mgr services -> dashboard URL (https :$DASHBOARD_PORT), curl -k expect 200"
   if [ "$ENABLE_S3_BGP" = 1 ]; then echo "  [dry-run] s3-bgp on ${S3_BGP_HOSTS[*]}: s3-bgp-health active, BGP peer $S3_BGP_PEER_IP state, advertised = only ${S3_BGP_VIP}/32, received = 0"; fi
   exit 0
 fi
@@ -48,6 +53,40 @@ if [ "$ENABLE_S3_BGP" = 1 ]; then
     else st=LOCAL-OK; fi
     echo "  s3-bgp:   $h $st ($r)"
   done
+fi
+MGRSVC=$(ceph_ mgr services --format json 2>/dev/null || echo '{}')
+if [ "$ENABLE_MONITORING" = 1 ]; then
+  SVCS=(ceph-exporter node-exporter prometheus grafana); [ "$ENABLE_ALERTMANAGER" = 1 ] && SVCS+=(alertmanager)
+  mon_state() { local s r z out=""; for s in "${SVCS[@]}"; do
+      read -r r z < <(ceph_ orch ls "$s" --format json 2>/dev/null | jq -r '.[0].status | "\(.running // 0) \(.size // 0)"' 2>/dev/null || echo "0 0")
+      out+="$s=${r:-0}/${z:-0} "; done; echo "$out"; }
+  end=$(( $(date +%s) + ${MONITORING_WAIT:-300} ))
+  while :; do
+    st=$(mon_state); bad=0
+    for kv in $st; do v=${kv#*=}; [ "${v%/*}" -ge 1 ] && [ "${v%/*}" = "${v#*/}" ] || bad=1; done
+    [ "$bad" = 0 ] || [ "$(date +%s)" -ge "$end" ] && break; sleep 10
+  done
+  if [ "$bad" = 0 ]; then echo "  monitor:  $st"; else echo "  monitor:  NOT all running: $st"; FAIL=1; fi
+  # ceph-exporter on node1 (every host runs one)
+  n=$(curl -s -m 5 "http://${ADMIN_IP}:9926/metrics" | grep -c '^ceph_' || true)
+  if [ "${n:-0}" -gt 0 ]; then echo "  exporter: http://${ADMIN_IP}:9926/metrics ok ($n ceph_* samples)"; else echo "  exporter: http://${ADMIN_IP}:9926/metrics NO ceph_* metrics"; FAIL=1; fi
+  PURL=$(jq -r '.prometheus // empty' <<<"$MGRSVC")
+  if [ -n "$PURL" ] && curl -s -m 5 "${PURL%/}/metrics" | grep -q '^ceph_health_status'; then echo "  mgr-prom: ${PURL%/}/metrics ok"
+  else echo "  mgr-prom: ${PURL:-<no mgr prometheus url>} not serving ceph_health_status"; FAIL=1; fi
+  MGRHOST=$(sed -E 's#^[a-z]+://\[?([^]/]+)\]?:[0-9]+.*#\1#' <<<"$PURL")
+  if [ -n "$MGRHOST" ] && curl -s -m 5 "http://${MGRHOST}:${SD_PORT}/sd/prometheus/sd-config?service=ceph-exporter" | jq -e 'length > 0' >/dev/null 2>&1; then
+    echo "  sd:       http://${MGRHOST}:${SD_PORT}/sd/prometheus/sd-config?service=ceph-exporter ok"
+  else echo "  sd:       http://${MGRHOST:-?}:${SD_PORT}/sd/ not answering (active mgr)"; FAIL=1; fi
+  PH=$(ceph_ orch ps --daemon_type prometheus --format json 2>/dev/null | jq -r '.[0].hostname // empty')
+  PIP=$(node_ip "$PH" 2>/dev/null || echo "$PH")
+  if [ -n "$PIP" ] && curl -s -m 5 "http://${PIP}:9095/-/ready" | grep -qi ready; then echo "  prometheus: http://${PIP}:9095 ready"
+  else echo "  prometheus: http://${PIP:-?}:9095 not ready"; FAIL=1; fi
+fi
+if [ "$ENABLE_DASHBOARD" = 1 ]; then
+  DURL=$(jq -r '.dashboard // empty' <<<"$MGRSVC")
+  code=$( [ -n "$DURL" ] && curl -k -s -m 5 -o /dev/null -w '%{http_code}' "$DURL" || echo 000)
+  if [ "$code" = 200 ]; then echo "  dashboard: $DURL (user $DASHBOARD_ADMIN_USER, password file $DASHBOARD_ADMIN_PASSWORD_FILE)"
+  else echo "  dashboard: ${DURL:-<not in mgr services>} HTTP $code"; FAIL=1; fi
 fi
 [ "$ENABLE_MON_VIP" = 1 ] && echo "  mon VIP:  $VIP_ADDR (check: ip -br addr | grep $VIP_ADDR on nodes)"
 echo "  monitors: $(IFS=,; echo "${NODE_IPS[*]:0:3}") (port 3300/6789) — use for CSI / clients"

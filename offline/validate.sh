@@ -85,6 +85,11 @@ if [ "$ENABLE_S3_BGP" = 1 ]; then
   if s3b_check_conf; then ok "S3 BGP: ${S3_BGP_VIP}/32 AS$S3_BGP_LOCAL_ASN -> $S3_BGP_PEER_IP AS$S3_BGP_PEER_ASN on ${S3_BGP_HOSTS[*]} (deploy.sh --only s3-bgp)"
   else bad "S3 BGP config invalid (see above)"; fi
 fi
+if [ "$ENABLE_MONITORING" = 1 ] || [ "$ENABLE_DASHBOARD" = 1 ]; then
+  if mout=$(CONF="$CONF" bash "$HERE/setup-monitoring.sh" --dry-run 2>&1 >/dev/null); then
+    ok "monitoring=$ENABLE_MONITORING dashboard=$ENABLE_DASHBOARD (https :$DASHBOARD_PORT, retention $PROMETHEUS_RETENTION_TIME/$PROMETHEUS_RETENTION_SIZE)"
+  else bad "monitoring/dashboard settings invalid: $(grep -v '^\s*$' <<<"$mout" | tr '\n' ' ')"; fi
+fi
 if [ "$NOSD" -gt 0 ]; then
   PER=$(( PGREP / NOSD ))
   if [ "$PER" -gt $(( TARGET_PG_PER_OSD * 5 / 2 )) ]; then bad "~$PER PG replicas/OSD (> 2.5x TARGET_PG_PER_OSD=$TARGET_PG_PER_OSD); lower pg_num"
@@ -109,6 +114,14 @@ if [ "$OFFLINE" = 0 ]; then
     grep -q MISSING <<<"$out" && bad "$n: offline bundle incomplete at $BUNDLE_DIR: $(grep MISSING <<<"$out" | tr '\n' ' ')" || ok "$n: bundle present at $BUNDLE_DIR"
     grep -q NOIP <<<"$out" && bad "$n: $ip not configured"
   done
+  if [ "$ENABLE_MONITORING" = 1 ]; then   # node1 pushes them to the local registry
+    miss=""
+    for b in "prometheus-$PROMETHEUS_TAG" "alertmanager-$ALERTMANAGER_TAG" "node-exporter-$NODE_EXPORTER_TAG" "grafana-$GRAFANA_TAG"; do
+      [ -s "$BUNDLE_DIR/images/$b.tar" ] || miss+=" images/$b.tar"
+    done
+    [ -z "$miss" ] && ok "${NODE_NAMES[0]}: monitoring images in bundle" \
+      || bad "${NODE_NAMES[0]}: missing$miss (bundle >= oneclick.3, or ENABLE_MONITORING=0)"
+  fi
   for e in "${OSD_DEVICES[@]}"; do
     IFS=: read -r h d _ <<<"$e"
     on_node "$h" "test -b '$d'" 2>/dev/null && ok "$h:$d exists" || bad "$h:$d not a block device on $h"

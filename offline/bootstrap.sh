@@ -10,6 +10,8 @@ if [ -f /etc/ceph/ceph.conf ] && cephadm ls 2>/dev/null | grep -q '"name": "mon\
 else
   curl -fsS "http://$REGISTRY/v2/ceph/ceph/tags/list" | grep -q "v${CEPH_VERSION}" || die "registry has no ceph v$CEPH_VERSION"
   cephadm --image "$CEPH_IMAGE" inspect-image
+  # Monitoring stack + dashboard are NOT deployed by bootstrap (it would pull from quay.io before
+  # the container_image_* keys below exist); setup-monitoring.sh (deploy stage "monitoring") does it.
   ARGS=(--image "$CEPH_IMAGE" bootstrap --mon-ip "$ADMIN_IP"
         --skip-monitoring-stack --skip-dashboard --skip-firewalld
         --allow-fqdn-hostname)
@@ -26,6 +28,11 @@ ceph_ config set mgr mgr/cephadm/use_repo_digest true
 # Pin ingress images to local registry (used by setup-ingress-vip.sh / orch apply ingress)
 ceph_ config set mgr mgr/cephadm/container_image_haproxy "$HAPROXY_IMAGE"
 ceph_ config set mgr mgr/cephadm/container_image_keepalived "$KEEPALIVED_IMAGE"
+# Pin monitoring images to local registry (setup-monitoring.sh; same keys, idempotent)
+ceph_ config set mgr mgr/cephadm/container_image_prometheus "$PROMETHEUS_IMAGE"
+ceph_ config set mgr mgr/cephadm/container_image_alertmanager "$ALERTMANAGER_IMAGE"
+ceph_ config set mgr mgr/cephadm/container_image_node_exporter "$NODE_EXPORTER_IMAGE"
+ceph_ config set mgr mgr/cephadm/container_image_grafana "$GRAFANA_IMAGE"
 [ -n "$OSD_MEMORY_TARGET" ] && ceph_ config set osd osd_memory_target "$OSD_MEMORY_TARGET"
 ceph_ orch host label add "$ADMIN_NAME" _admin >/dev/null
 ceph_ orch host label add "$ADMIN_NAME" mon >/dev/null

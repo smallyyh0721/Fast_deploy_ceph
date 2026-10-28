@@ -14,21 +14,31 @@ Ceph CSI is a **separate** offline project — not in this repo.
 **[docs/s3-bgp-switch-h3c.md](docs/s3-bgp-switch-h3c.md)**（H3C 应用/检查/回退）。
 实验依据与证据：[doc/s3-vip-bgp-20261027/README.md](doc/s3-vip-bgp-20261027/README.md)。
 
+## 监控 / Dashboard / 宿主机 Ceph 包 / 备份（oneclick.3）
+
+- 监控栈默认部署：`deploy.sh` 阶段 `monitoring`（老集群 `--only monitoring`）— prometheus v3.6.0、alertmanager v0.28.1、
+  node-exporter v1.9.1、grafana 12.3.1、ceph-exporter（复用 ceph 镜像），全部来自本地 registry；Dashboard HTTPS 8443。
+  告警只导出指标（不配 webhook/SMTP），外部采集端口与示例见 **[docs/monitoring.md](docs/monitoring.md)**。
+- 宿主机 `ceph-common` / `librados2` / `librbd1` / `python3-ceph-*` 统一 20.2.4（download.ceph.com `debian-20.2.4` noble，固定版本）。
+- `offline/backup-cluster-meta.sh`：只读导出集群元数据，**默认不运行**、不装定时任务，见 **[docs/backup.md](docs/backup.md)**。
+
 ## Existing offline toolkit
 
 - `build/` — internet machine: `./build/build-bundle.sh` → bundle + tar + `SHA256SUMS`
-  - `images.list` pins `ceph`, `registry:2`, `haproxy:2.3`, `keepalived:2.2.4`
+  - `images.list` pins `ceph`, `registry:2`, `haproxy:2.3`, `keepalived:2.2.4`, `prometheus`, `alertmanager`, `node-exporter`, `grafana`
+  - tars > 2 GiB are split for GitHub (`*.part-NN`; `cat *.part-* > bundle.tar && sha256sum -c bundle.tar.sha256`)
 - **One-click:** `sudo ./offline/deploy.sh --dry-run` then `sudo ./offline/deploy.sh` on node1 —
   validate → install (pushed over SSH) → bootstrap → hosts → OSD preview + **typed confirm** → OSD →
-  RBD pools → RGW (+ own ingress VIP) → CephFS → mon VIP → verify. See `docs/oneclick.md`.
+  RBD pools → RGW (+ own ingress VIP) → CephFS → mon VIP → monitoring/dashboard → verify. See `docs/oneclick.md`.
 - `offline/` — air-gapped nodes (`cluster.conf.example` → `cluster.conf`), step-by-step scripts:
-  1. `install-node.sh` (every node, node1 first) — pushes ceph + ingress images to local registry
-  2. `bootstrap.sh` (node1) — also pins `mgr/cephadm/container_image_{haproxy,keepalived}`
+  1. `install-node.sh` (every node, node1 first) — pushes every `images.list` image to the local registry
+  2. `bootstrap.sh` (node1) — also pins `mgr/cephadm/container_image_{haproxy,keepalived,prometheus,alertmanager,node_exporter,grafana}`
   3. `add-hosts.sh` / `add-osds.sh`
   4. `setup-ingress-vip.sh` — preview default; `--apply` for VIP (placeholders in conf)
   5. `setup-cephfs.sh` (optional)
   6. new: `validate.sh`, `disk-safety.sh` (+ `tests/`), `setup-pools.sh`, `setup-rgw.sh`, `verify.sh`, `deploy.sh`
-  7. optional: `setup-s3-bgp.sh` / `teardown-s3-bgp.sh` + `s3-bgp/` (FRR only on RGW nodes; `build/packages-s3-bgp.list`)
+  7. `setup-monitoring.sh` (default on) / `backup-cluster-meta.sh` (manual only)
+  8. optional: `setup-s3-bgp.sh` / `teardown-s3-bgp.sh` + `s3-bgp/` (FRR only on RGW nodes; `build/packages-s3-bgp.list`)
 - `docs/oneclick.md` — 一键部署（阶段、续跑、OSD 安全闸门、RGW VIP、可选 `--only s3-bgp`）
 - `docs/s3-bgp.md` / `docs/s3-bgp-switch-h3c.md` — 可选 S3 BGP/ECMP 入口（节点侧 / 交换机人工）
 - `docs/runbook-3node.md` — 现场手册（hosts / SSH / OSD / **VIP**）

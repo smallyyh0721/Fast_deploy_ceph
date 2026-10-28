@@ -45,6 +45,10 @@ mapfile -t PKGS < <(grep -Ev '^\s*(#|$)' "$HERE/packages.list")
 log "apt install --no-download: ${PKGS[*]}"
 DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-download --no-install-recommends \
   -o Dir::Etc::sourcelist="$LIST" -o Dir::Etc::sourceparts=- "${PKGS[@]}"
+for p in ceph-common librados2 librbd1; do   # oneclick.3+: download.ceph.com debian-20.2.4 (download-debs.sh)
+  v=$(dpkg-query -W -f='${Version}' "$p" 2>/dev/null || true)
+  case $v in "${CEPH_VERSION}"-*) log "host $p $v";; *) warn "host $p is '${v:-not installed}', expected ${CEPH_VERSION}-* (bundle older than oneclick.3?)";; esac
+done
 
 # --- 3. ssh + time --------------------------------------------------------------
 systemctl enable --now ssh >/dev/null 2>&1 || systemctl enable --now ssh.socket
@@ -111,12 +115,40 @@ push_if_missing() {
     podman push --tls-verify=false "$img"
   fi
 }
+in_registry() { # local ref <REGISTRY>/<path>:<tag>
+  local p=${1#"$REGISTRY"/}
+  curl -fsS "http://$REGISTRY/v2/${p%:*}/tags/list" 2>/dev/null | grep -q "\"${p##*:}\""
+}
+# images.list ships next to this script in the bundle (build-bundle.sh copies it); git checkout: build/
+IMAGES_LIST=$HERE/images.list
+[ -f "$IMAGES_LIST" ] || IMAGES_LIST=$HERE/../build/images.list
+is_monitoring_image() { case " $MONITORING_IMAGE_NAMES " in *" $1 "*) return 0;; esac; return 1; }
+# podman load images/<base>.tar (unless present), tag as <REGISTRY>/<path>, push if missing.
+push_images_from_list() {
+  local name ref base tar lref p
+  [ -f "$IMAGES_LIST" ] || die "images.list not found next to $0"
+  while IFS='|' read -r name ref base; do
+    [ "$name" = registry ] && continue
+    tar="$BUNDLE_DIR/images/${base}.tar"
+    if ! has_image "$ref"; then
+      if [ ! -s "$tar" ]; then
+        if is_monitoring_image "$name" && [ "$ENABLE_MONITORING" != 1 ]; then
+          warn "images/${base}.tar missing; skipped (ENABLE_MONITORING=0)"; continue
+        fi
+        die "missing images/${base}.tar ($ref) in $BUNDLE_DIR (bundle older than images.list?)"
+      fi
+      log "podman load $base"
+      podman load -i "$tar"
+    fi
+    lref=$(local_image_ref "$ref"); p=${lref#"$REGISTRY"/}
+    podman tag "$ref" "$lref"
+    push_if_missing "${p%:*}" "${p##*:}" "$lref"
+  done < <(images_list_entries "$IMAGES_LIST")
+}
 
 # --- 6. registry on admin node -------------------------------------------------------
 if [ "$ROLE" = admin ]; then
   has_image docker.io/library/registry:2 || podman load -i "$BUNDLE_DIR/images/registry-2.tar"
-  load_ceph_image
-  load_ingress_images
   mkdir -p /var/lib/ceph-local-registry
   cat > /etc/systemd/system/ceph-local-registry.service <<EOU
 [Unit]
@@ -140,12 +172,20 @@ EOU
   systemctl restart ceph-local-registry.service
   for _ in $(seq 1 30); do curl -fsS "http://$REGISTRY/v2/" >/dev/null 2>&1 && break; sleep 1; done
   curl -fsS "http://$REGISTRY/v2/" >/dev/null || die "registry not answering on $REGISTRY"
-  push_if_missing "ceph/ceph" "v${CEPH_VERSION}" "$CEPH_IMAGE"
-  push_if_missing "ceph/haproxy" "$HAPROXY_TAG" "$HAPROXY_IMAGE"
-  push_if_missing "ceph/keepalived" "$KEEPALIVED_TAG" "$KEEPALIVED_IMAGE"
-  curl -fsS "http://$REGISTRY/v2/ceph/ceph/tags/list"; echo
-  curl -fsS "http://$REGISTRY/v2/ceph/haproxy/tags/list"; echo
-  curl -fsS "http://$REGISTRY/v2/ceph/keepalived/tags/list"; echo
+  # every image of images.list (ceph, ingress, monitoring) -> local registry
+  push_images_from_list
+  # cluster.conf may override ingress tags: keep the old explicit load+push for those
+  load_ceph_image; push_if_missing "ceph/ceph" "v${CEPH_VERSION}" "$CEPH_IMAGE"
+  in_registry "$HAPROXY_IMAGE" && in_registry "$KEEPALIVED_IMAGE" || {
+    load_ingress_images
+    push_if_missing "ceph/haproxy" "$HAPROXY_TAG" "$HAPROXY_IMAGE"
+    push_if_missing "ceph/keepalived" "$KEEPALIVED_TAG" "$KEEPALIVED_IMAGE"
+  }
+  REQ=("$CEPH_IMAGE" "$HAPROXY_IMAGE" "$KEEPALIVED_IMAGE")
+  [ "$ENABLE_MONITORING" = 1 ] && REQ+=("$PROMETHEUS_IMAGE" "$ALERTMANAGER_IMAGE" "$NODE_EXPORTER_IMAGE" "$GRAFANA_IMAGE")
+  for r in "${REQ[@]}"; do
+    in_registry "$r" && echo "  registry: $r" || die "local registry is missing $r"
+  done
 else
   if [ "$LOAD_IMAGE_ON_ALL_NODES" = 1 ]; then
     load_ceph_image

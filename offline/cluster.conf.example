@@ -157,3 +157,27 @@ S3_BGP_PROBE_MODE="anon-xml"; S3_BGP_PROBE_URL=""
 S3_BGP_PROBE_EXPECT="ListAllMyBucketsResult"; S3_BGP_PROBE_CODES="200 403"
 S3_BGP_RISE=3; S3_BGP_FALL=2; S3_BGP_INTERVAL=2   # advertise after 3 good, withdraw after 2 bad, poll 2s
 S3_BGP_WATCHDOG_SEC=15
+
+# =====================================================================================
+# Monitoring + dashboard (deploy.sh stage "monitoring" = setup-monitoring.sh; docs/monitoring.md)
+# ON by default. Images come from the node1 local registry (bundle >= oneclick.3).
+# Alerts: no webhook/SMTP is configured; metrics are exported for external scraping
+# (mgr :9283, ceph-exporter :9926, node-exporter :9100, prometheus :9095, SD :8765).
+# =====================================================================================
+ENABLE_MONITORING=1                       # ceph-exporter, node-exporter, prometheus, alertmanager, grafana
+ENABLE_ALERTMANAGER=1
+MONITORING_HOSTS=()                       # prometheus/alertmanager/grafana hosts; () = count:1
+PROMETHEUS_RETENTION_TIME="15d"           # y|w|d|h|m|s
+PROMETHEUS_RETENTION_SIZE="0"             # 0 = unlimited, e.g. "50GB"
+ENABLE_DASHBOARD=1                        # HTTPS on DASHBOARD_PORT
+DASHBOARD_PORT=8443
+DASHBOARD_CERT=""; DASHBOARD_KEY=""       # both set = own cert (PEM); both "" = self-signed
+DASHBOARD_ADMIN_USER="admin"
+DASHBOARD_ADMIN_PASSWORD_FILE="/etc/fast-deploy/dashboard-admin.pass"   # generated (600) if missing; never printed
+GRAFANA_FRONTEND_API_URL=""               # e.g. "https://10.250.0.11:3000" if browsers need another URL
+GRAFANA_API_SSL_VERIFY="False"            # cephadm grafana uses a self-signed cert
+GRAFANA_ADMIN_PASSWORD_FILE=""            # optional grafana initial admin password file ("" = anonymous viewer only)
+SD_PORT=8765                              # cephadm Prometheus service discovery (http_sd)
+
+# Metadata backup (backup-cluster-meta.sh, manual only -- never run by deploy.sh; docs/backup.md)
+BACKUP_DIR="/var/backups/ceph-meta"

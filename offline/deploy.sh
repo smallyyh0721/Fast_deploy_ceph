@@ -7,13 +7,15 @@
 #   sudo ./deploy.sh --reset-stage rgw     # forget the done-marker of a stage (then exit)
 #   --yes   skip the "start deployment?" prompt. It does NOT skip the OSD typed confirmation.
 #   --list  show stages and their markers
-# Stages: validate install bootstrap hosts osd-preview osd pools rgw cephfs vip verify
+# Stages: validate install bootstrap hosts osd-preview osd pools rgw cephfs vip monitoring verify
+#   monitoring = setup-monitoring.sh (ENABLE_MONITORING/ENABLE_DASHBOARD, default on); an existing
+#   cluster gets it with --only monitoring
 # Optional (never in the default run / --from): --only s3-bgp  (ENABLE_S3_BGP=1, docs/s3-bgp.md)
 # Markers: $STATE_DIR/<stage>.done (contain sha256 of cluster.conf).
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$HERE/lib.sh"
-STAGES=(validate install bootstrap hosts osd-preview osd pools rgw cephfs vip verify)
+STAGES=(validate install bootstrap hosts osd-preview osd pools rgw cephfs vip monitoring verify)
 OPT_STAGES=(s3-bgp)   # only via --only / --reset-stage
 FROM=""; ONLY=""; RESET=""; YES=0; LIST=0
 while [ $# -gt 0 ]; do
@@ -24,7 +26,7 @@ while [ $# -gt 0 ]; do
     --reset-stage) RESET=$2; shift;;
     --yes|-y) YES=1;;
     --list) LIST=1;;
-    -h|--help) sed -n '2,14p' "$0"; exit 0;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0;;
     *) die "unknown arg $1";;
   esac; shift
 done
@@ -102,6 +104,10 @@ stage_pools() { bash "$HERE/setup-pools.sh" "${DRYFLAG[@]}"; }
 stage_rgw() { [ "$ENABLE_RGW" = 1 ] || { log "ENABLE_RGW=0, skip"; return 0; }; bash "$HERE/setup-rgw.sh" "${DRYFLAG[@]}"; }
 stage_cephfs() { [ "$ENABLE_CEPHFS" = 1 ] || { log "ENABLE_CEPHFS=0, skip"; return 0; }; run bash "$HERE/setup-cephfs.sh"; }
 stage_vip() { [ "$ENABLE_MON_VIP" = 1 ] || { log "ENABLE_MON_VIP=0, skip"; return 0; }; run bash "$HERE/setup-ingress-vip.sh" --apply; }
+stage_monitoring() {
+  if [ "$ENABLE_MONITORING" != 1 ] && [ "$ENABLE_DASHBOARD" != 1 ]; then log "ENABLE_MONITORING=0 ENABLE_DASHBOARD=0, skip"; return 0; fi
+  bash "$HERE/setup-monitoring.sh" "${DRYFLAG[@]}"
+}
 stage_verify() { bash "$HERE/verify.sh" "${DRYFLAG[@]}"; }
 stage_s3_bgp() {
   [ "$ENABLE_S3_BGP" = 1 ] || die "ENABLE_S3_BGP=0 in $CONF (optional BGP entry, docs/s3-bgp.md)"

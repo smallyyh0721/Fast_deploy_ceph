@@ -78,12 +78,47 @@ load_conf() {
   S3_BGP_PROBE_EXPECT=${S3_BGP_PROBE_EXPECT:-ListAllMyBucketsResult}; S3_BGP_PROBE_CODES=${S3_BGP_PROBE_CODES:-200 403}
   S3_BGP_RISE=${S3_BGP_RISE:-3}; S3_BGP_FALL=${S3_BGP_FALL:-2}; S3_BGP_INTERVAL=${S3_BGP_INTERVAL:-2}
   S3_BGP_WATCHDOG_SEC=${S3_BGP_WATCHDOG_SEC:-15}
+  # --- monitoring stack + dashboard (setup-monitoring.sh / deploy.sh stage "monitoring") ---
+  # Image tags = cephadm 20.2.4 DefaultImages (src/python-common/ceph/cephadm/images.py).
+  ENABLE_MONITORING=${ENABLE_MONITORING:-1}; ENABLE_DASHBOARD=${ENABLE_DASHBOARD:-1}
+  ENABLE_ALERTMANAGER=${ENABLE_ALERTMANAGER:-1}
+  PROMETHEUS_TAG=${PROMETHEUS_TAG:-v3.6.0}; ALERTMANAGER_TAG=${ALERTMANAGER_TAG:-v0.28.1}
+  NODE_EXPORTER_TAG=${NODE_EXPORTER_TAG:-v1.9.1}; GRAFANA_TAG=${GRAFANA_TAG:-12.3.1}
+  PROMETHEUS_IMAGE_SRC="quay.io/prometheus/prometheus:${PROMETHEUS_TAG}"
+  ALERTMANAGER_IMAGE_SRC="quay.io/prometheus/alertmanager:${ALERTMANAGER_TAG}"
+  NODE_EXPORTER_IMAGE_SRC="quay.io/prometheus/node-exporter:${NODE_EXPORTER_TAG}"
+  GRAFANA_IMAGE_SRC="quay.io/ceph/grafana:${GRAFANA_TAG}"
+  PROMETHEUS_IMAGE=$(local_image_ref "$PROMETHEUS_IMAGE_SRC")
+  ALERTMANAGER_IMAGE=$(local_image_ref "$ALERTMANAGER_IMAGE_SRC")
+  NODE_EXPORTER_IMAGE=$(local_image_ref "$NODE_EXPORTER_IMAGE_SRC")
+  GRAFANA_IMAGE=$(local_image_ref "$GRAFANA_IMAGE_SRC")
+  declare -p MONITORING_HOSTS >/dev/null 2>&1 || MONITORING_HOSTS=()   # prometheus/alertmanager/grafana; () = count:1
+  PROMETHEUS_RETENTION_TIME=${PROMETHEUS_RETENTION_TIME:-15d}; PROMETHEUS_RETENTION_SIZE=${PROMETHEUS_RETENTION_SIZE:-0}
+  GRAFANA_FRONTEND_API_URL=${GRAFANA_FRONTEND_API_URL:-}; GRAFANA_API_SSL_VERIFY=${GRAFANA_API_SSL_VERIFY:-False}
+  GRAFANA_ADMIN_PASSWORD_FILE=${GRAFANA_ADMIN_PASSWORD_FILE:-}
+  DASHBOARD_PORT=${DASHBOARD_PORT:-8443}; DASHBOARD_CERT=${DASHBOARD_CERT:-}; DASHBOARD_KEY=${DASHBOARD_KEY:-}
+  DASHBOARD_ADMIN_USER=${DASHBOARD_ADMIN_USER:-admin}
+  DASHBOARD_ADMIN_PASSWORD_FILE=${DASHBOARD_ADMIN_PASSWORD_FILE:-/etc/fast-deploy/dashboard-admin.pass}
+  SD_PORT=${SD_PORT:-8765}
   # SSH knobs may be set in cluster.conf; rebuild after sourcing
   SSH_CONNECT_TIMEOUT=${SSH_CONNECT_TIMEOUT:-8}
   SSH_STRICT_HOSTKEY=${SSH_STRICT_HOSTKEY:-0}
   SSH_KNOWN_HOSTS=${SSH_KNOWN_HOSTS:-}
   ssh_build_opts || die "invalid SSH settings (see above)"
 }
+
+# quay.io/ceph/ceph:v20.2.4 -> <REGISTRY>/ceph/ceph:v20.2.4 (drop the source registry host,
+# keep the repository path). Used for every image in images.list.
+local_image_ref() { local r=$1; case ${r%%/*} in *.*|*:*|localhost) r=${r#*/};; esac; echo "${REGISTRY}/${r}"; }
+# images.list entries "name|ref|base|digest" (comments/blank skipped), printed as "name|ref|base"
+images_list_entries() {
+  local f=$1 name ref base _d
+  while IFS='|' read -r name ref base _d || [ -n "${name:-}" ]; do
+    [[ -z "${name// /}" || "$name" =~ ^[[:space:]]*# ]] && continue
+    printf '%s|%s|%s\n' "$name" "$ref" "$base"
+  done < "$f"
+}
+MONITORING_IMAGE_NAMES="prometheus alertmanager node-exporter grafana"
 
 # DRY_RUN=1: mutating commands are printed, not executed.
 DRY_RUN=${DRY_RUN:-0}
@@ -137,3 +172,6 @@ self_index() {
 # Always close stdin: cephadm shell would otherwise drain a parent pipeline
 # (e.g. `done < "$PLAN_FILE"` in add-osds.sh --apply-plan).
 ceph_() { cephadm shell -- ceph "$@" </dev/null; }
+# Same, but stdin is the given FILE (`ceph_in FILE <ceph args> -i -`): secrets and certs go
+# through stdin, never argv. stdin is always redirected (FILE is mandatory).
+ceph_in() { local f=${1:?ceph_in: input file}; shift; [ -r "$f" ] || die "ceph_in: $f not readable"; cephadm shell -- ceph "$@" < "$f"; }

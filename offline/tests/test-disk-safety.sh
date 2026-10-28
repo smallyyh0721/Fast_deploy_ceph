@@ -140,6 +140,7 @@ o=$(optsx "$W/cd.conf" SSH_STRICT_HOSTKEY=0); if [[ $o == *accept-new* ]]; then 
 o=$(grep -nE '(^|[^-_[:alnum:]])cephadm shell' "$OFF"/*.sh "$OFF"/s3-bgp/*.sh \
       | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' \
       | grep -vE '(echo|log) "[^"]*cephadm shell|CMDS\+=\("cephadm shell' \
+      | grep -vE '^[^:]+:[0-9]+:ceph_in\(\) \{ .*cephadm shell -- ceph "\$@" < "\$f"; \}$' \
       | grep -v '</dev/null' || true)
 if [ -z "$o" ]; then r=0; else r=1; fi; chk "no bare cephadm shell without </dev/null in offline/*.sh" $r
 o=setup-pools; if grep -q 'run cephadm shell -- rbd pool init "$name" </dev/null' "$OFF/setup-pools.sh"; then r=0; else r=1; fi; chk "setup-pools rbd pool init closes stdin" $r
