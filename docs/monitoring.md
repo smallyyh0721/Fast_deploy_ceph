@@ -57,6 +57,7 @@ svc 可取：`mgr-prometheus`、`ceph-exporter`、`node-exporter`、`alertmanage
 
 ## 外部 Prometheus 采集示例
 服务发现只在 **active mgr** 上应答：把所有 mgr 主机都写上，备 mgr 的 URL 报错不影响其它。
+注意：`service=mgr-prometheus` 返回的目标是**主机名**（实测 `[{"targets": ["node2:9283"]}]`），外部 Prometheus 必须能解析 node1/node2/node3（DNS 或 /etc/hosts），否则用下面的静态目标；node-exporter / ceph-exporter 返回的是 IP。
 
 ```yaml
 scrape_configs:

@@ -71,7 +71,13 @@ if [ "$ENABLE_MONITORING" = 1 ]; then
   n=$(curl -s -m 5 "http://${ADMIN_IP}:9926/metrics" | grep -c '^ceph_' || true)
   if [ "${n:-0}" -gt 0 ]; then echo "  exporter: http://${ADMIN_IP}:9926/metrics ok ($n ceph_* samples)"; else echo "  exporter: http://${ADMIN_IP}:9926/metrics NO ceph_* metrics"; FAIL=1; fi
   PURL=$(jq -r '.prometheus // empty' <<<"$MGRSVC")
-  if [ -n "$PURL" ] && curl -s -m 5 "${PURL%/}/metrics" | grep -q '^ceph_health_status'; then echo "  mgr-prom: ${PURL%/}/metrics ok"
+  # no 'curl | grep -q' (pipefail + SIGPIPE); the mgr renders slowly and may just have failed over: retry
+  pm=""; for _ in 1 2 3 4 5 6; do
+    [ -n "$PURL" ] && pm=$(curl -s -m 30 "${PURL%/}/metrics" || true)
+    grep -q '^ceph_health_status' <<<"$pm" && break; sleep 10
+    PURL=$(ceph_ mgr services 2>/dev/null | jq -r '.prometheus // empty' 2>/dev/null || true)
+  done
+  if grep -q '^ceph_health_status' <<<"$pm"; then echo "  mgr-prom: ${PURL%/}/metrics ok"
   else echo "  mgr-prom: ${PURL:-<no mgr prometheus url>} not serving ceph_health_status"; FAIL=1; fi
   MGRHOST=$(sed -E 's#^[a-z]+://\[?([^]/]+)\]?:[0-9]+.*#\1#' <<<"$PURL")
   if [ -n "$MGRHOST" ] && curl -s -m 5 "http://${MGRHOST}:${SD_PORT}/sd/prometheus/sd-config?service=ceph-exporter" | jq -e 'length > 0' >/dev/null 2>&1; then
