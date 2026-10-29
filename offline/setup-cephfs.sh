@@ -41,6 +41,28 @@ for c in "$CLIENT_RO" "$CLIENT_RW"; do
 done
 ceph_ osd pool ls detail
 ceph_ fs status "$FS_NAME"
-MONS=$(IFS=/; echo "${NODE_IPS[*]:0:3}")
-log "client mount example (secret in /root/ceph-client-secrets/):"
-echo "mount -t ceph $CLIENT_RO@.$FS_NAME=/ /mnt/$FS_NAME -o mon_addr=${MONS},secretfile=/etc/ceph/$CLIENT_RO.secret,_netdev"
+
+# Ubuntu 24.04 kernel 6.8 rejects kernel CephFS/krbd secrets ("libceph: secret too big 32").
+# ceph-fuse uses librados. The bundle ships ceph-fuse; fuse3's fusermount is enough, so a
+# conflict between the transitional fuse package and fuse3 must not fail this stage.
+DEB_DIR=$(cd "$HERE/.." && pwd)/debs
+if ! command -v ceph-fuse >/dev/null 2>&1; then
+  lib_deb=$(ls "$DEB_DIR"/libfuse2t64_*.deb 2>/dev/null | head -1 || true)
+  fuse_deb=$(ls "$DEB_DIR"/ceph-fuse_*.deb 2>/dev/null | head -1 || true)
+  if [ -n "$fuse_deb" ]; then
+    [ -n "$lib_deb" ] && dpkg -i "$lib_deb" >/dev/null 2>&1 || true
+    if dpkg -i "$fuse_deb"; then
+      log "installed $(basename "$fuse_deb")"
+    else
+      warn "dpkg -i $(basename "$fuse_deb") failed"
+    fi
+  else
+    warn "ceph-fuse deb not in $DEB_DIR; kernel mount -t ceph will fail on Ubuntu 24.04 kernel 6.8"
+  fi
+fi
+mon_addrs=()
+for ip in "${NODE_IPS[@]:0:3}"; do mon_addrs+=("${ip}:3300"); done
+MON_ADDRS=$(IFS=,; echo "${mon_addrs[*]}")
+log "client mount uses ceph-fuse (raw key file, mode 600, under /root/ceph-client-secrets/):"
+echo "ceph-fuse -n client.${CLIENT_RO} --keyfile /root/ceph-client-secrets/${CLIENT_RO}.secret -m ${MON_ADDRS} --client_fs ${FS_NAME} /mnt/${FS_NAME}"
+warn "do not use mount -t ceph on Ubuntu 24.04 kernel 6.8: dmesg shows libceph: secret too big 32"

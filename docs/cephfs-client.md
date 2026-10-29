@@ -33,23 +33,18 @@ ceph auth get-key client.modelreader > /root/ceph-client-secrets/modelreader.sec
 
 ## 2. 客户端挂载
 
-三个 MON 都写上，单台宕机仍可挂：
+用 `ceph-fuse`。Ubuntu 24.04 内核 6.8 上 `mount -t ceph` 会在写入内核密钥时失败，dmesg 为 `libceph: secret too big 32`。三个 MON 都写上，单台宕机仍可挂。密钥文件是 `ceph auth get-key` 的原文，模式 600。
 
 ```bash
-sudo mkdir -p /etc/ceph /mnt/models
-sudo install -m 600 modelreader.secret /etc/ceph/modelreader.secret
-sudo mount -t ceph modelreader@.models=/ /mnt/models \
-  -o mon_addr=10.250.0.11:3300/10.250.0.12:3300/10.250.0.13:3300,secretfile=/etc/ceph/modelreader.secret,_netdev
+sudo mkdir -p /mnt/models
+sudo ceph-fuse -n client.modelreader \
+  --keyfile /root/ceph-client-secrets/modelreader.secret \
+  -m 10.250.0.11:3300,10.250.0.12:3300,10.250.0.13:3300 \
+  --client_fs models /mnt/models
 ```
 
-fstab：
-
-```fstab
-modelreader@.models=/  /mnt/models  ceph  mon_addr=10.250.0.11:3300/10.250.0.12:3300/10.250.0.13:3300,secretfile=/etc/ceph/modelreader.secret,_netdev,nofail,x-systemd.automount  0  0
-```
-
-- 离线客户端需要 `mount.ceph`：用 bundle 的 `debs/` 做本地源，`apt-get install --no-download ceph-common`。
-- 只读账号写文件应被拒绝；**不要**把 admin keyring 发给客户端。
+- 离线节点用 bundle 里的 `ceph-fuse` 和 `libfuse2t64`。节点若已安装 `fuse3`，不要强行配置会冲突的过渡包 `fuse`；`fusermount` 指向 `fusermount3` 即可。
+- 只读账号写文件应被拒绝；不要把 admin keyring 发给客户端。
 - 常用端口：3300/6789 MON，6800–7568 OSD/MDS，22 SSH；5000 仅 node1↔node2/3（registry）。
 
 ## 3. 相关验收

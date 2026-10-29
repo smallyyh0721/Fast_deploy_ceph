@@ -94,6 +94,14 @@ if [ "$ENABLE_DASHBOARD" = 1 ]; then
   if [ "$code" = 200 ]; then echo "  dashboard: $DURL (user $DASHBOARD_ADMIN_USER, password file $DASHBOARD_ADMIN_PASSWORD_FILE)"
   else echo "  dashboard: ${DURL:-<not in mgr services>} HTTP $code"; FAIL=1; fi
 fi
+if [ "$ENABLE_CEPHFS" = 1 ]; then
+  raw=$(ceph_ fs status "$FS_NAME" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' || true)
+  if grep -qi 'active' <<<"$raw" && grep -qi 'standby' <<<"$raw"; then
+    echo "  cephfs:   $FS_NAME active+standby"
+  else
+    echo "  cephfs:   $FS_NAME not active+standby"; FAIL=1
+  fi
+fi
 [ "$ENABLE_MON_VIP" = 1 ] && echo "  mon VIP:  $VIP_ADDR (check: ip -br addr | grep $VIP_ADDR on nodes)"
 echo "  monitors: $(IFS=,; echo "${NODE_IPS[*]:0:3}") (port 3300/6789) — use for CSI / clients"
 [ "$FAIL" = 0 ] || die "verify: problems found (see above)"

@@ -23,7 +23,7 @@ install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://download.ceph.com/keys/release.asc -o /etc/apt/keyrings/ceph.asc
 echo "deb [signed-by=/etc/apt/keyrings/ceph.asc] ${CEPH_REPO} noble main" > /etc/apt/sources.list.d/ceph.list
 cat > /etc/apt/preferences.d/ceph-pin <<PIN
-Package: ceph-common ceph-base librados2 librbd1 libcephfs2 libcephfs-proxy2 libradosstriper1 librgw2 libsqlite3-mod-ceph python3-ceph* python3-rados python3-rbd python3-cephfs python3-rgw radosgw rbd-nbd
+Package: ceph-common ceph-fuse ceph-base librados2 librbd1 libcephfs2 libcephfs-proxy2 libradosstriper1 librgw2 libsqlite3-mod-ceph python3-ceph* python3-rados python3-rbd python3-cephfs python3-rgw radosgw rbd-nbd
 Pin: version ${CEPH_DEB_VERSION}
 Pin-Priority: 1001
 PIN
@@ -46,11 +46,11 @@ xargs -a /tmp/real.txt apt-get download -q >/dev/null
 apt-get install -y -q --download-only --no-install-recommends "${PKGS[@]}" >/dev/null
 cp -n /var/cache/apt/archives/*.deb . 2>/dev/null || true
 # 3) never ship two Ceph versions: drop any non-pinned ceph lib/client deb, then assert the pin
-for f in ceph-common_* ceph-base_* librados2_* librbd1_* libcephfs2_* libcephfs-proxy2_* libradosstriper1_* librgw2_* libsqlite3-mod-ceph_* python3-ceph*_* python3-rados_* python3-rbd_* python3-cephfs_* python3-rgw_*; do
+for f in ceph-common_* ceph-fuse_* ceph-base_* librados2_* librbd1_* libcephfs2_* libcephfs-proxy2_* libradosstriper1_* librgw2_* libsqlite3-mod-ceph_* python3-ceph*_* python3-rados_* python3-rbd_* python3-cephfs_* python3-rgw_*; do
   [ -e "$f" ] || continue
   case $f in *"_${CEPH_DEB_VERSION}_"*) ;; *) echo "drop non-pinned $f"; rm -f "$f";; esac
 done
-for p in ceph-common librados2 librbd1 python3-ceph-common python3-ceph-argparse python3-rados python3-rbd; do
+for p in ceph-common ceph-fuse librados2 librbd1 python3-ceph-common python3-ceph-argparse python3-rados python3-rbd; do
   ls "${p}_${CEPH_DEB_VERSION}_"*.deb >/dev/null 2>&1 || { echo "FATAL: ${p} ${CEPH_DEB_VERSION} not downloaded" >&2; exit 1; }
 done
 dpkg-scanpackages . /dev/null 2>/dev/null > Packages

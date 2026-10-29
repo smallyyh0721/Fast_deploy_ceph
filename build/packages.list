@@ -14,6 +14,8 @@ nvme-cli
 smartmontools
 ca-certificates
 ceph-common
+# Userspace CephFS client. Ubuntu 24.04 kernel 6.8 cannot mount -t ceph (libceph: secret too big 32).
+ceph-fuse
 # same version as ceph-common (pinned to CEPH_VERSION by download-debs.sh, download.ceph.com)
 librados2
 librbd1
